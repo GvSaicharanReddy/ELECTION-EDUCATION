@@ -1,0 +1,100 @@
+# ===========================
+# Dependencies & Package Managers
+# ===========================
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+
+# ===========================
+# Build Outputs
+# ===========================
+dist/
+build/
+.next/
+.turbo/
+out/
+
+# ===========================
+# Caches
+# ===========================
+.vite/
+.cache/
+.parcel-cache/
+*.tsbuildinfo
+
+# ===========================
+# Test Artifacts
+# ===========================
+coverage/
+.pytest_cache/
+__pycache__/
+*.pyc
+.nyc_output/
+
+# ===========================
+# Python Virtual Environments
+# ===========================
+venv/
+.venv/
+env/
+
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ===========================
+# IDE & OS
+# ===========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================
+# Media & Binary Assets
+# (zero-asset policy)
+# ===========================
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.bmp
+*.tiff
+*.glb
+*.obj
+*.fbx
+*.gltf
+*.mp4
+*.mp3
+*.wav
+*.ogg
+*.woff
+*.woff2
+*.ttf
+*.otf
+*.eot
+
+# ===========================
+# Logs
+# ===========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ===========================
+# Generated / Misc
+# ===========================
+*.tgz
+*.map.bak
