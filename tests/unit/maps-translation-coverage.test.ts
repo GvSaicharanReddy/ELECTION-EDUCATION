@@ -268,7 +268,7 @@ describe('ElectionTranslationService — Extended Coverage', () => {
 
   it('translateText returns translated text from API response', async () => {
     vi.stubEnv('VITE_GOOGLE_TRANSLATION_API_KEY', 'test-key');
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: () =>
@@ -284,7 +284,7 @@ describe('ElectionTranslationService — Extended Coverage', () => {
 
   it('translateText returns original on API failure', async () => {
     vi.stubEnv('VITE_GOOGLE_TRANSLATION_API_KEY', 'test-key');
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
     const { ElectionTranslationService } = await import('../../src/services/translation');
     const service = new ElectionTranslationService();
     const result = await service.translateText('Election day', 'te');
@@ -315,7 +315,7 @@ describe('ElectionTranslationService — Extended Coverage', () => {
 
   it('translateBatch returns translated array on success', async () => {
     vi.stubEnv('VITE_GOOGLE_TRANSLATION_API_KEY', 'test-key');
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: () =>
@@ -333,7 +333,7 @@ describe('ElectionTranslationService — Extended Coverage', () => {
 
   it('translateBatch returns originals on API failure', async () => {
     vi.stubEnv('VITE_GOOGLE_TRANSLATION_API_KEY', 'test-key');
-    global.fetch = vi.fn().mockRejectedValue(new Error('Timeout'));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Timeout'));
     const { ElectionTranslationService } = await import('../../src/services/translation');
     const service = new ElectionTranslationService();
     const result = await service.translateBatch(['A', 'B'], 'ta');
@@ -359,7 +359,7 @@ describe('SafeApiClient — Extended Coverage', () => {
   });
 
   it('GET request succeeds with mocked fetch', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: () => Promise.resolve({ result: 'ok' }),
@@ -373,7 +373,7 @@ describe('SafeApiClient — Extended Coverage', () => {
   });
 
   it('GET request returns error on non-ok status', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 403,
       json: () => Promise.resolve({ error: 'forbidden' }),
@@ -387,7 +387,7 @@ describe('SafeApiClient — Extended Coverage', () => {
   });
 
   it('GET request returns error on network failure', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
     const { SafeApiClient } = await import('../../src/services/api-client');
     const client = new SafeApiClient({ baseUrl: 'https://example.com', retries: 0 });
     const result = await client.get<unknown>('/fail');
@@ -396,7 +396,7 @@ describe('SafeApiClient — Extended Coverage', () => {
   });
 
   it('POST request succeeds with mocked fetch', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
+    globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: () => Promise.resolve({ saved: true }),
@@ -409,7 +409,7 @@ describe('SafeApiClient — Extended Coverage', () => {
   });
 
   it('POST request returns error on network failure', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('offline'));
+    globalThis.fetch = vi.fn().mockRejectedValue(new Error('offline'));
     const { SafeApiClient } = await import('../../src/services/api-client');
     const client = new SafeApiClient({ baseUrl: 'https://example.com', retries: 0 });
     const result = await client.post<unknown>('/upload', { key: 'val' });
@@ -419,7 +419,7 @@ describe('SafeApiClient — Extended Coverage', () => {
 
   it('retries the request on failure', async () => {
     let callCount = 0;
-    global.fetch = vi.fn().mockImplementation(() => {
+    globalThis.fetch = vi.fn().mockImplementation(() => {
       callCount++;
       if (callCount < 2) return Promise.reject(new Error('transient'));
       return Promise.resolve({
