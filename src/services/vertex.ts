@@ -108,6 +108,9 @@ export class ElectionVertexService {
   private readonly client: SafeApiClient;
   private readonly apiKey: string;
 
+  /**
+   * Initialize the Vertex AI Service.
+   */
   constructor() {
     this.apiKey = String(
       import.meta.env.VITE_GEMINI_API_KEY ||

@@ -32,6 +32,9 @@ export class ElectionMapsService {
   private mapInstance: google.maps.Map | null;
   private isLoaded: boolean;
 
+  /**
+   * Initialize the Google Maps Service.
+   */
   constructor() {
     this.apiKey = String(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_KEY || '');
     this.cache = new ElectionCache<PollingLocation[]>({

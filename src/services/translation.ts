@@ -87,6 +87,9 @@ export class ElectionTranslationService {
   private readonly apiKey: string;
   private readonly cache: ElectionCache<string>;
 
+  /**
+   * Initialize the Cloud Translation Service.
+   */
   constructor() {
     this.apiKey = String(
       import.meta.env.VITE_GOOGLE_TRANSLATION_API_KEY || '',

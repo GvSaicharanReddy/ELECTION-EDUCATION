@@ -235,6 +235,9 @@ export class ElectionCoachService {
   private readonly analytics: ElectionAnalyticsService;
   private conversationHistory: CoachMessage[];
 
+  /**
+   * Initialize the Election Coach Gemini Service.
+   */
   constructor() {
     this.apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY || '');
     this.model = String(import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash');

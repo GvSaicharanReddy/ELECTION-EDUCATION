@@ -104,6 +104,9 @@ export class ElectionAnalyticsService {
   private readonly apiKey: string;
   private readonly sessionId: string;
 
+  /**
+   * Initialize the Analytics Service.
+   */
   constructor() {
     this.apiKey = String(
       import.meta.env.VITE_GOOGLE_CLOUD_API_KEY ||
