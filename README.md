@@ -4,6 +4,8 @@ An interactive, AI-powered civic education web application designed to guide Ind
 
 [![CI/CD Pipeline](https://github.com/python7188/ELECTION-SAATHI-INDIA/actions/workflows/ci.yml/badge.svg)](https://github.com/python7188/ELECTION-SAATHI-INDIA/actions)
 
+**🚀 Live Application:** [https://election-saathi-india-djda3etlsa-uc.a.run.app](https://election-saathi-india-djda3etlsa-uc.a.run.app)
+
 ---
 
 ## ✨ Key Features
