@@ -39,23 +39,31 @@ describe('ElectionAnalyticsService', () => {
 
   it('trackQuery handles empty string gracefully', async () => {
     const service = new ElectionAnalyticsService();
+    // @ts-ignore
+    vi.spyOn(service as any, 'analyseWithNaturalLanguage').mockRejectedValue(new Error('mock timeout'));
     await expect(service.trackQuery('')).resolves.toBeUndefined();
   });
 
   it('trackQuery handles very long input gracefully', async () => {
     const service = new ElectionAnalyticsService();
+    // @ts-ignore
+    vi.spyOn(service as any, 'analyseWithNaturalLanguage').mockRejectedValue(new Error('mock timeout'));
     const longQuery = 'a'.repeat(5000);
     await expect(service.trackQuery(longQuery)).resolves.toBeUndefined();
   });
 
   it('trackQuery handles malicious XSS input gracefully', async () => {
     const service = new ElectionAnalyticsService();
+    // @ts-ignore
+    vi.spyOn(service as any, 'analyseWithNaturalLanguage').mockRejectedValue(new Error('mock timeout'));
     const xssQuery = '<script>alert("xss")</script>';
     await expect(service.trackQuery(xssQuery)).resolves.toBeUndefined();
   });
 
   it('trackQuery handles SQL injection input gracefully', async () => {
     const service = new ElectionAnalyticsService();
+    // @ts-ignore
+    vi.spyOn(service as any, 'analyseWithNaturalLanguage').mockRejectedValue(new Error('mock timeout'));
     const sqlQuery = "'; DROP TABLE voters; --";
     await expect(service.trackQuery(sqlQuery)).resolves.toBeUndefined();
   });
