@@ -19,9 +19,14 @@ import { announce } from '../utils/a11y';
  * and suggested quick-action buttons for common election questions.
  */
 export class ElectionCoachPanel {
-  private container: HTMLElement;
-  private coach: ElectionCoachService;
+  private readonly container: HTMLElement;
+  private readonly coach: ElectionCoachService;
 
+  /**
+   * Initialize the Election Coach panel.
+   *
+   * @throws {Error} If the #coach-panel container element is missing from the DOM.
+   */
   constructor() {
     const el = document.getElementById('coach-panel');
     if (!el) {
@@ -156,15 +161,10 @@ export class ElectionCoachPanel {
     const div = document.createElement('div');
     div.id = id;
     div.className = `coach-message coach-${role}`;
-    div.style.cssText = `
-      padding: var(--space-3);
-      background: ${role === 'user' ? 'rgba(0, 0, 128, 0.05)' : 'var(--bg-elevated)'};
-      border-radius: var(--radius-md);
-      margin-bottom: var(--space-3);
-      ${role === 'user' ? 'border-left: 3px solid var(--navy);' : ''}
-    `;
+    const isUser = role === 'user';
+    div.style.cssText = this.getMessageStyle(isUser);
 
-    const label = role === 'user' ? 'You' : '🏛️ Official Helpdesk';
+    const label = isUser ? 'You' : '🏛️ Official Helpdesk';
     div.innerHTML = `
       <p style="color: var(--navy); font-weight: 600; margin-bottom: var(--space-1);">${label}</p>
       <p class="message-content" style="color: var(--text-secondary); white-space: pre-wrap;"></p>
@@ -196,5 +196,16 @@ export class ElectionCoachPanel {
     if (p) {
       p.textContent = content;
     }
+  }
+
+  /**
+   * Helper to get CSS text for a message.
+   * @param isUser - true if message is from user
+   * @returns CSS text
+   */
+  private getMessageStyle(isUser: boolean): string {
+    const bg = isUser ? 'rgba(0, 0, 128, 0.05)' : 'var(--bg-elevated)';
+    const border = isUser ? 'border-left: 3px solid var(--navy);' : '';
+    return `padding: var(--space-3); background: ${bg}; border-radius: var(--radius-md); margin-bottom: var(--space-3); ${border}`;
   }
 }

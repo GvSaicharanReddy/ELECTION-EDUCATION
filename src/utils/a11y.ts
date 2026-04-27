@@ -13,10 +13,7 @@
  * @param message - Plain text message to announce.
  * @param priority - 'polite' for non-urgent, 'assertive' for immediate.
  */
-export function announce(
-  message: string,
-  priority: 'polite' | 'assertive' = 'polite',
-): void {
+export function announce(message: string, priority: 'polite' | 'assertive' = 'polite'): void {
   const announcer = document.getElementById('aria-announcer');
   if (!announcer) {
     return;
@@ -83,14 +80,8 @@ export function trapFocus(containerId: string): () => void {
 
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
-    }
+    
+    handleTabFocusShift(event, first, last, document.activeElement as HTMLElement | null);
   };
 
   container.addEventListener('keydown', handleKeyDown);
@@ -98,6 +89,19 @@ export function trapFocus(containerId: string): () => void {
   return () => {
     container.removeEventListener('keydown', handleKeyDown);
   };
+}
+
+/**
+ * Handle tab focus shifting to trap focus within bounds.
+ */
+function handleTabFocusShift(event: KeyboardEvent, first: HTMLElement, last: HTMLElement, active: HTMLElement | null): void {
+  if (event.shiftKey && active === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && active === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 /**

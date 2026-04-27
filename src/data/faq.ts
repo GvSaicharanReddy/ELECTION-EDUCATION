@@ -87,7 +87,7 @@ export const ELECTION_FAQ: readonly FAQItem[] = [
     id: 'faq-postal-ballot',
     question: 'Who can vote by postal ballot?',
     answer:
-      'Postal ballot (Electronically Transmitted Postal Ballot System — ETPBS) is available to: (a) service voters (armed forces, paramilitary, diplomats); (b) voters on election duty; (c) voters above 80 years of age; (d) persons with disabilities (PwD); (e) voters under preventive detention; and (f) COVID-19 positive/quarantined persons (as per ECI\'s COVID protocols).',
+      "Postal ballot (Electronically Transmitted Postal Ballot System — ETPBS) is available to: (a) service voters (armed forces, paramilitary, diplomats); (b) voters on election duty; (c) voters above 80 years of age; (d) persons with disabilities (PwD); (e) voters under preventive detention; and (f) COVID-19 positive/quarantined persons (as per ECI's COVID protocols).",
     category: 'Voting Process',
     relatedStageId: JourneyStageId.VOTING_METHODS,
   },
@@ -131,7 +131,7 @@ export const ELECTION_FAQ: readonly FAQItem[] = [
     id: 'faq-results-where',
     question: 'Where can I see election results?',
     answer:
-      'Official results are published in real-time on results.eci.gov.in and through the ECI\'s social media channels. Major news channels (Doordarshan, NDTV, Times Now, etc.) also provide live coverage. Constituency-wise results are declared throughout counting day.',
+      "Official results are published in real-time on results.eci.gov.in and through the ECI's social media channels. Major news channels (Doordarshan, NDTV, Times Now, etc.) also provide live coverage. Constituency-wise results are declared throughout counting day.",
     category: 'After Voting',
     relatedStageId: JourneyStageId.POST_VOTE,
   },
@@ -211,7 +211,6 @@ export function searchFaq(query: string): readonly FAQItem[] {
   }
   return ELECTION_FAQ.filter(
     (f) =>
-      f.question.toLowerCase().includes(normalised) ||
-      f.answer.toLowerCase().includes(normalised),
+      f.question.toLowerCase().includes(normalised) || f.answer.toLowerCase().includes(normalised),
   );
 }

@@ -89,9 +89,7 @@ export function validateStageId(stageId: unknown): ValidationResult {
   if (!VALID_STAGE_IDS.has(stageId)) {
     return {
       isValid: false,
-      errors: [
-        `Invalid stage ID "${stageId}". Valid stages: ${[...VALID_STAGE_IDS].join(', ')}.`,
-      ],
+      errors: [`Invalid stage ID "${stageId}". Valid stages: ${[...VALID_STAGE_IDS].join(', ')}.`],
     };
   }
 
@@ -105,37 +103,39 @@ export function validateStageId(stageId: unknown): ValidationResult {
  * @returns Validation result with eligibility message.
  */
 export function validateVoterAge(age: unknown): ValidationResult {
-  const errors: string[] = [];
-
   if (typeof age !== 'number' || Number.isNaN(age)) {
     return { isValid: false, errors: ['Age must be a valid number.'] };
   }
 
-  if (!Number.isInteger(age)) {
-    errors.push('Age must be a whole number.');
+  const numericErrors = getNumericAgeErrors(age);
+  if (numericErrors.length > 0) {
+    return { isValid: false, errors: numericErrors };
   }
 
-  if (age < 0 || age > 150) {
-    errors.push('Age must be between 0 and 150.');
-  }
-
-  if (errors.length > 0) {
-    return { isValid: false, errors };
-  }
-
-  if (age < 18) {
-    return {
-      isValid: true,
-      errors: [],
-      sanitizedValue: `You are ${age} years old. You must be 18 or older to vote. You will be eligible in ${18 - age} year(s).`,
-    };
-  }
+  const isEligible = age >= 18;
+  const waitYears = 18 - age;
 
   return {
     isValid: true,
     errors: [],
-    sanitizedValue: `You are ${age} years old. You are eligible to vote!`,
+    sanitizedValue: isEligible
+      ? `You are ${age} years old. You are eligible to vote!`
+      : `You are ${age} years old. You must be 18 or older to vote. You will be eligible in ${waitYears} year(s).`,
   };
+}
+
+/**
+ * Check age for numeric bounds and format errors.
+ */
+function getNumericAgeErrors(age: number): string[] {
+  const errors: string[] = [];
+  if (!Number.isInteger(age)) {
+    errors.push('Age must be a whole number.');
+  }
+  if (age < 0 || age > 150) {
+    errors.push('Age must be between 0 and 150.');
+  }
+  return errors;
 }
 
 /**

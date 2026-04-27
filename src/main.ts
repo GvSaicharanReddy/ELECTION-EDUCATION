@@ -144,7 +144,9 @@ function initListeners(): void {
   });
 
   // Announce app ready
-  announce('Election Saathi India is ready. Navigate through the election journey to learn about Indian elections.');
+  announce(
+    'Election Saathi India is ready. Navigate through the election journey to learn about Indian elections.',
+  );
 
   // Scroll spy for nav
   setupScrollSpy();
@@ -158,9 +160,7 @@ function initListeners(): void {
 function supportsWebGL(): boolean {
   try {
     const canvas = document.createElement('canvas');
-    return !!(
-      canvas.getContext('webgl2') || canvas.getContext('webgl')
-    );
+    return !!(canvas.getContext('webgl2') || canvas.getContext('webgl'));
   } catch {
     return false;
   }

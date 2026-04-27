@@ -25,8 +25,13 @@ import { JourneyStageId } from '../types/index';
  * Synchronises state with the 3D scene via the global store.
  */
 export class AccessibleFallback {
-  private container: HTMLElement;
+  private readonly container: HTMLElement;
 
+  /**
+   * Initialize the accessible fallback layer.
+   *
+   * @throws {Error} If the #accessible-fallback container element is missing from the DOM.
+   */
   constructor() {
     const el = document.getElementById('accessible-fallback');
     if (!el) {
@@ -60,7 +65,7 @@ export class AccessibleFallback {
                 role="tab"
                 id="a11y-tab-${stage.id}"
                 aria-selected="${i === 0 ? 'true' : 'false'}"
-                aria-controls="a11y-panel-${stage.id}"
+                aria-controls="panel-${stage.id}"
                 tabindex="${i === 0 ? '0' : '-1'}"
                 data-stage-id="${stage.id}"
                 class="sr-only"
@@ -72,7 +77,6 @@ export class AccessibleFallback {
           ).join('')}
         </ul>
       </nav>
-      <div id="a11y-stage-panels" aria-live="polite"></div>
     `;
 
     // Attach keyboard navigation for tab list
@@ -90,7 +94,8 @@ export class AccessibleFallback {
     }
 
     // Tab buttons
-    panelsContainer.innerHTML = ELECTION_STAGES.map((stage, i) => `
+    panelsContainer.innerHTML = ELECTION_STAGES.map(
+      (stage, i) => `
       <button
         role="tab"
         id="tab-${stage.id}"
@@ -102,7 +107,8 @@ export class AccessibleFallback {
         <span aria-hidden="true">${stage.icon}</span>
         ${escapeHtml(stage.title)}
       </button>
-    `).join('');
+    `,
+    ).join('');
 
     // Initial panel
     this.updateStagePanel(JourneyStageId.ELIGIBILITY);
@@ -134,21 +140,18 @@ export class AccessibleFallback {
     }
 
     const pos = getStagePosition(stageId);
+    content.innerHTML = this.buildStagePanelHtml(stage, pos);
 
-    content.innerHTML = `
-      <div
-        role="tabpanel"
-        id="panel-${stage.id}"
-        aria-labelledby="tab-${stage.id}"
-        class="card"
-      >
-        <h3>${escapeHtml(stage.title)}</h3>
-        <p class="section-description">${escapeHtml(stage.description)}</p>
-        <p class="sr-only">Stage ${pos} of 7. ${escapeHtml(stage.ariaLabel)}</p>
-        <ol>
-          ${stage.steps
-            .map(
-              (step) => `
+    this.updateTabSelection(stageId);
+  }
+
+  /**
+   * Build the HTML for a stage panel.
+   */
+  private buildStagePanelHtml(stage: (typeof ELECTION_STAGES)[0], pos: number): string {
+    const stepsHtml = stage.steps
+      .map(
+        (step) => `
             <li style="margin-bottom: var(--space-4);">
               <strong>${escapeHtml(step.title)}</strong>
               <p style="color: var(--text-secondary); margin-top: var(--space-1);">${escapeHtml(step.description)}</p>
@@ -159,13 +162,30 @@ export class AccessibleFallback {
               }
             </li>
           `,
-            )
-            .join('')}
+      )
+      .join('');
+
+    return `
+      <div
+        role="tabpanel"
+        id="panel-${stage.id}"
+        aria-labelledby="tab-${stage.id}"
+        class="card"
+      >
+        <h3>${escapeHtml(stage.title)}</h3>
+        <p class="section-description">${escapeHtml(stage.description)}</p>
+        <p class="sr-only">Stage ${pos} of 7. ${escapeHtml(stage.ariaLabel)}</p>
+        <ol>
+          ${stepsHtml}
         </ol>
       </div>
     `;
+  }
 
-    // Update tab states
+  /**
+   * Update the tab selection states.
+   */
+  private updateTabSelection(stageId: JourneyStageId): void {
     const tabs = document.querySelectorAll('#journey-stages [role="tab"]');
     tabs.forEach((tab) => {
       const isActive = tab.getAttribute('data-stage-id') === stageId;
@@ -226,7 +246,7 @@ export class AccessibleFallback {
     timeline.innerHTML = events
       .map(
         (event) => `
-      <div class="card" role="listitem" style="margin-bottom: var(--space-3); border-left: 3px solid ${String(event.priority) === 'critical' ? 'var(--saffron)' : String(event.priority) === 'high' ? 'var(--green-india)' : 'var(--border-subtle)'};">
+      <div class="card" role="listitem" style="margin-bottom: var(--space-3); border-left: 3px solid ${this.getEventBorderColor(String(event.priority))};">
         <div style="display: flex; justify-content: space-between; align-items: start;">
           <h3 style="font-size: var(--text-lg); color: var(--navy);">${escapeHtml(event.title)}</h3>
           <span style="font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: ${event.isDeadline ? 'var(--error)' : 'var(--bg-elevated)'}; color: ${event.isDeadline ? 'white' : 'var(--text-secondary)'};">
@@ -239,6 +259,19 @@ export class AccessibleFallback {
     `,
       )
       .join('');
+  }
+
+  /**
+   * Get border color for an event based on priority.
+   */
+  private getEventBorderColor(priority: string): string {
+    if (priority === 'critical') {
+      return 'var(--saffron)';
+    }
+    if (priority === 'high') {
+      return 'var(--green-india)';
+    }
+    return 'var(--border-subtle)';
   }
 
   /**
@@ -289,15 +322,11 @@ export class AccessibleFallback {
       const pos = getStagePosition(state.currentStage);
       const stage = ELECTION_STAGES.find((s) => s.id === state.currentStage);
       if (stage) {
-        announce(
-          `Now viewing stage ${pos} of 7: ${stage.title}. ${stage.subtitle}`,
-        );
+        announce(`Now viewing stage ${pos} of 7: ${stage.title}. ${stage.subtitle}`);
       }
 
       // Update nav
-      setActiveNavSection(
-        state.activeSection || 'election-journey',
-      );
+      setActiveNavSection(state.activeSection || 'election-journey');
     });
   }
 
@@ -312,51 +341,57 @@ export class AccessibleFallback {
         return;
       }
 
-      const tabs = Array.from(
-        this.container.querySelectorAll<HTMLElement>('[role="tab"]'),
-      );
-      const currentIndex = tabs.indexOf(target);
-
-      let nextIndex = currentIndex;
-
-      switch (event.key) {
-        case 'ArrowRight':
-        case 'ArrowDown':
-          nextIndex = (currentIndex + 1) % tabs.length;
-          event.preventDefault();
-          break;
-        case 'ArrowLeft':
-        case 'ArrowUp':
-          nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-          event.preventDefault();
-          break;
-        case 'Home':
-          nextIndex = 0;
-          event.preventDefault();
-          break;
-        case 'End':
-          nextIndex = tabs.length - 1;
-          event.preventDefault();
-          break;
-        case 'Enter':
-        case ' ':
-          event.preventDefault();
-          {
-            const stageId = target.getAttribute('data-stage-id') as JourneyStageId;
-            if (stageId) {
-              store.goToStage(stageId);
-            }
-          }
-          return;
-        default:
-          return;
-      }
-
-      tabs[nextIndex].focus();
-      const stageId = tabs[nextIndex].getAttribute('data-stage-id') as JourneyStageId;
-      if (stageId) {
-        store.goToStage(stageId);
-      }
+      const tabs = Array.from(this.container.querySelectorAll<HTMLElement>('[role="tab"]'));
+      this.handleTabKeydown(event, target, tabs);
     });
+  }
+
+  /**
+   * Handle keydown events for tab navigation.
+   */
+  private handleTabKeydown(event: KeyboardEvent, target: HTMLElement, tabs: HTMLElement[]): void {
+    const currentIndex = tabs.indexOf(target);
+    const nextIndex = this.getNextTabIndex(event.key, currentIndex, tabs.length);
+
+    if (nextIndex !== currentIndex && nextIndex !== -1) {
+      event.preventDefault();
+      tabs[nextIndex].focus();
+      this.activateTab(tabs[nextIndex]);
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.activateTab(target);
+    }
+  }
+
+  /**
+   * Determine the next tab index based on key press.
+   */
+  private getNextTabIndex(key: string, current: number, max: number): number {
+    const isNext = key === 'ArrowRight' || key === 'ArrowDown';
+    const isPrev = key === 'ArrowLeft' || key === 'ArrowUp';
+    
+    if (isNext) {
+      return (current + 1) % max;
+    }
+    if (isPrev) {
+      return (current - 1 + max) % max;
+    }
+    if (key === 'Home') {
+      return 0;
+    }
+    if (key === 'End') {
+      return max - 1;
+    }
+    return -1;
+  }
+
+  /**
+   * Activate the stage represented by a tab element.
+   */
+  private activateTab(target: HTMLElement): void {
+    const stageId = target.getAttribute('data-stage-id') as JourneyStageId;
+    if (stageId) {
+      store.goToStage(stageId);
+    }
   }
 }

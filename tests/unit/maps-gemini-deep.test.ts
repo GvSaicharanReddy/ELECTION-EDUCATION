@@ -12,7 +12,9 @@ describe('ElectionMapsService — Deep Coverage', () => {
     (globalThis as any).google = {
       maps: {
         Map: vi.fn(),
-        Marker: vi.fn(),
+        marker: {
+          AdvancedMarkerElement: vi.fn(),
+        },
         places: {
           PlacesService: vi.fn().mockImplementation(() => ({
             textSearch: vi.fn((request, callback) => {

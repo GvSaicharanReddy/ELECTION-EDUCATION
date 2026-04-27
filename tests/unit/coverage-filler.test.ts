@@ -130,7 +130,9 @@ describe('Coverage Filler Tests', () => {
             PlacesService: vi.fn(() => ({ textSearch: mockTextSearch })),
             PlacesServiceStatus: { OK: 'OK', REQUEST_DENIED: 'REQUEST_DENIED', ZERO_RESULTS: 'ZERO_RESULTS' },
           },
-          Marker: vi.fn(),
+          marker: {
+            AdvancedMarkerElement: vi.fn(),
+          },
         },
       } as any;
 

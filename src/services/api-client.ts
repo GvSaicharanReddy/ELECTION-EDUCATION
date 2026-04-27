@@ -102,64 +102,72 @@ export class SafeApiClient {
    * @param options - Fetch options.
    * @returns Typed API response wrapper.
    */
-  private async request<T>(
-    path: string,
-    options: RequestInit,
-  ): Promise<ApiResponse<T>> {
+  private async request<T>(path: string, options: RequestInit): Promise<ApiResponse<T>> {
     const url = `${this.config.baseUrl}${path}`;
     const maxRetries = this.config.retries ?? 1;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const response = await fetchWithTimeout(
-          url,
-          {
-            ...options,
-            headers: {
-              ...this.config.headers,
-              ...(options.headers as Record<string, string>),
-            },
-          },
-          this.config.timeoutMs,
-        );
-
-        if (!response.ok) {
-          return {
-            ok: false,
-            data: null,
-            error: `Request failed with status ${response.status}`,
-            status: response.status,
-          };
-        }
-
-        const data = (await response.json()) as T;
-        return { ok: true, data, error: null, status: response.status };
+        return await this.executeAttempt<T>(url, options);
       } catch (error: unknown) {
-        const isLastAttempt = attempt === maxRetries;
-        if (isLastAttempt) {
-          const message =
-            error instanceof Error ? error.message : 'Unknown network error';
-          const isTimeout = message.includes('abort');
-          return {
-            ok: false,
-            data: null,
-            error: isTimeout
-              ? 'Request timed out. Please check your connection.'
-              : 'Network error. Please try again later.',
-            status: 0,
-          };
+        if (attempt === maxRetries) {
+          return this.handleFinalError<T>(error);
         }
-        // Wait before retry (exponential backoff)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.pow(2, attempt) * 500),
-        );
+        await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 500));
       }
     }
 
+    return { ok: false, data: null, error: 'Max retries exceeded.', status: 0 };
+  }
+
+  /**
+   * Execute a single fetch attempt.
+   *
+   * @param url - Full URL.
+   * @param options - Fetch options.
+   * @returns Typed API response wrapper.
+   */
+  private async executeAttempt<T>(url: string, options: RequestInit): Promise<ApiResponse<T>> {
+    const response = await fetchWithTimeout(
+      url,
+      {
+        ...options,
+        headers: {
+          ...this.config.headers,
+          ...(options.headers as Record<string, string>),
+        },
+      },
+      this.config.timeoutMs,
+    );
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        data: null,
+        error: `Request failed with status ${response.status}`,
+        status: response.status,
+      };
+    }
+
+    const data = (await response.json()) as T;
+    return { ok: true, data, error: null, status: response.status };
+  }
+
+  /**
+   * Handle the final error after all retries fail.
+   *
+   * @param error - The caught error.
+   * @returns Typed API response wrapper with formatted error.
+   */
+  private handleFinalError<T>(error: unknown): ApiResponse<T> {
+    const message = error instanceof Error ? error.message : 'Unknown network error';
+    const isTimeout = message.includes('abort');
     return {
       ok: false,
       data: null,
-      error: 'Max retries exceeded.',
+      error: isTimeout
+        ? 'Request timed out. Please check your connection.'
+        : 'Network error. Please try again later.',
       status: 0,
     };
   }

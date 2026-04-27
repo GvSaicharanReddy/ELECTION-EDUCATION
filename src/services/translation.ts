@@ -14,21 +14,22 @@
 import { SafeApiClient } from './api-client';
 import { sanitizeFull } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
+import type { ApiResponse } from '../types/index';
 
 /* ---- Types ---- */
 
 /** Supported Indian language codes for civic translation. */
 export type IndianLanguageCode =
-  | 'hi'  // Hindi
-  | 'te'  // Telugu
-  | 'ta'  // Tamil
-  | 'kn'  // Kannada
-  | 'bn'  // Bengali
-  | 'mr'  // Marathi
-  | 'gu'  // Gujarati
-  | 'ml'  // Malayalam
-  | 'pa'  // Punjabi
-  | 'or'  // Odia
+  | 'hi' // Hindi
+  | 'te' // Telugu
+  | 'ta' // Tamil
+  | 'kn' // Kannada
+  | 'bn' // Bengali
+  | 'mr' // Marathi
+  | 'gu' // Gujarati
+  | 'ml' // Malayalam
+  | 'pa' // Punjabi
+  | 'or' // Odia
   | 'as'; // Assamese
 
 /** Translation API request body. */
@@ -59,7 +60,11 @@ interface TranslationApiResponse {
 const TRANSLATION_API_BASE = 'https://translation.googleapis.com/language/translate/v2';
 
 /** Human-readable names for the judge-readable feature surface. */
-export const SUPPORTED_LANGUAGES: readonly { code: IndianLanguageCode; name: string; nativeName: string }[] = [
+export const SUPPORTED_LANGUAGES: readonly {
+  code: IndianLanguageCode;
+  name: string;
+  nativeName: string;
+}[] = [
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी' },
   { code: 'te', name: 'Telugu', nativeName: 'తెలుగు' },
   { code: 'ta', name: 'Tamil', nativeName: 'தமிழ்' },
@@ -91,9 +96,7 @@ export class ElectionTranslationService {
    * Initialize the Cloud Translation Service.
    */
   constructor() {
-    this.apiKey = String(
-      import.meta.env.VITE_GOOGLE_TRANSLATION_API_KEY || '',
-    );
+    this.apiKey = String(import.meta.env.VITE_GOOGLE_TRANSLATION_API_KEY || '');
 
     this.client = new SafeApiClient({
       baseUrl: TRANSLATION_API_BASE,
@@ -149,13 +152,10 @@ export class ElectionTranslationService {
         format: 'text',
       };
 
-      const response = await this.client.post<TranslationApiResponse>(
-        `?key=${this.apiKey}`,
-        body,
-      );
+      const response = await this.client.post<TranslationApiResponse>(`?key=${this.apiKey}`, body);
+      const translated = this.extractTranslatedText(response);
 
-      if (response.ok && response.data?.data?.translations?.[0]?.translatedText) {
-        const translated = response.data.data.translations[0].translatedText;
+      if (translated) {
         this.cache.set(cacheKey, translated);
         return translated;
       }
@@ -196,13 +196,11 @@ export class ElectionTranslationService {
         format: 'text',
       };
 
-      const response = await this.client.post<TranslationApiResponse>(
-        `?key=${this.apiKey}`,
-        body,
-      );
+      const response = await this.client.post<TranslationApiResponse>(`?key=${this.apiKey}`, body);
+      const translated = this.extractBatchTranslations(response);
 
-      if (response.ok && response.data?.data?.translations) {
-        return response.data.data.translations.map((t) => t.translatedText);
+      if (translated) {
+        return translated;
       }
     } catch {
       // Fail gracefully — return original texts
@@ -222,5 +220,31 @@ export class ElectionTranslationService {
   private validateLanguageCode(code: string): IndianLanguageCode | null {
     const normalised = code.toLowerCase().trim().slice(0, 5);
     return ALLOWED_LANG_CODES.has(normalised) ? (normalised as IndianLanguageCode) : null;
+  }
+
+  /**
+   * Extract translated text from the API response to reduce cyclomatic complexity.
+   *
+   * @param response - API response.
+   * @returns Translated string or null.
+   */
+  private extractTranslatedText(response: ApiResponse<TranslationApiResponse>): string | null {
+    if (!response.ok || !response.data?.data?.translations?.[0]) {
+      return null;
+    }
+    return response.data.data.translations[0].translatedText || null;
+  }
+
+  /**
+   * Extract batch translations from the API response to reduce cyclomatic complexity.
+   *
+   * @param response - API response.
+   * @returns Array of translated strings or null.
+   */
+  private extractBatchTranslations(response: ApiResponse<TranslationApiResponse>): string[] | null {
+    if (!response.ok || !response.data?.data?.translations) {
+      return null;
+    }
+    return response.data.data.translations.map((t) => t.translatedText);
   }
 }

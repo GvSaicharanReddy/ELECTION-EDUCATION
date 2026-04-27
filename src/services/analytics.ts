@@ -78,16 +78,18 @@ const NL_API_BASE = 'https://language.googleapis.com/v1';
  * Keyword-to-intent map for local pre-classification.
  * Replaces a complex if-else chain to stay within complexity limits.
  */
-const INTENT_MAP: readonly { readonly keywords: readonly string[]; readonly intent: QueryIntent }[] =
-  [
-    { keywords: ['eligib', 'can i vote', 'age'], intent: 'eligibility' },
-    { keywords: ['register', 'enrol', 'form 6'], intent: 'registration' },
-    { keywords: ['booth', 'polling', 'where'], intent: 'polling_location' },
-    { keywords: ['evm', 'vvpat', 'machine'], intent: 'evm_vvpat' },
-    { keywords: ['lok sabha', 'rajya', 'panchayat', 'municipal'], intent: 'election_type' },
-    { keywords: ['candidate', 'party', 'mp'], intent: 'candidate_info' },
-    { keywords: ['date', 'schedule', 'deadline'], intent: 'timeline' },
-  ] as const;
+const INTENT_MAP: readonly {
+  readonly keywords: readonly string[];
+  readonly intent: QueryIntent;
+}[] = [
+  { keywords: ['eligib', 'can i vote', 'age'], intent: 'eligibility' },
+  { keywords: ['register', 'enrol', 'form 6'], intent: 'registration' },
+  { keywords: ['booth', 'polling', 'where'], intent: 'polling_location' },
+  { keywords: ['evm', 'vvpat', 'machine'], intent: 'evm_vvpat' },
+  { keywords: ['lok sabha', 'rajya', 'panchayat', 'municipal'], intent: 'election_type' },
+  { keywords: ['candidate', 'party', 'mp'], intent: 'candidate_info' },
+  { keywords: ['date', 'schedule', 'deadline'], intent: 'timeline' },
+] as const;
 
 /* ---- Service ---- */
 
@@ -237,9 +239,7 @@ export class ElectionAnalyticsService {
   private classifyIntent(query: string): QueryIntent {
     const lower = query.toLowerCase();
 
-    const match = INTENT_MAP.find((entry) =>
-      entry.keywords.some((kw) => lower.includes(kw)),
-    );
+    const match = INTENT_MAP.find((entry) => entry.keywords.some((kw) => lower.includes(kw)));
 
     return match?.intent ?? 'general';
   }

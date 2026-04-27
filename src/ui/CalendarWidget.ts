@@ -31,6 +31,9 @@ const CATEGORY_ICONS: Record<string, string> = {
 export class CalendarWidget {
   private readonly calendar: ElectionCalendarService;
 
+  /**
+   * Initialize the Calendar widget and render election reminders.
+   */
   constructor() {
     this.calendar = new ElectionCalendarService();
     this.render();
@@ -58,15 +61,19 @@ export class CalendarWidget {
     widget.appendChild(heading);
 
     const subheading = document.createElement('p');
-    subheading.style.cssText = 'color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4);';
-    subheading.textContent = 'Never miss a key election date. Click any reminder to add it directly to your Google Calendar.';
+    subheading.style.cssText =
+      'color: var(--text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-4);';
+    subheading.textContent =
+      'Never miss a key election date. Click any reminder to add it directly to your Google Calendar.';
     widget.appendChild(subheading);
 
     widget.appendChild(this.buildReminderList());
 
     const note = document.createElement('p');
-    note.style.cssText = 'margin-top: var(--space-3); font-size: var(--text-xs); color: var(--text-muted);';
-    note.textContent = 'Powered by Google Calendar. Dates are indicative — verify with eci.gov.in for confirmed schedules.';
+    note.style.cssText =
+      'margin-top: var(--space-3); font-size: var(--text-xs); color: var(--text-muted);';
+    note.textContent =
+      'Powered by Google Calendar. Dates are indicative — verify with eci.gov.in for confirmed schedules.';
     widget.appendChild(note);
 
     coach.appendChild(widget);
@@ -81,7 +88,8 @@ export class CalendarWidget {
     const reminders = this.calendar.getAllReminders();
     const list = document.createElement('ul');
     list.setAttribute('role', 'list');
-    list.style.cssText = 'list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3);';
+    list.style.cssText =
+      'list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-3);';
 
     reminders.forEach((reminder) => {
       const link = this.calendar.generateCalendarLink(reminder);
@@ -96,13 +104,18 @@ export class CalendarWidget {
       ].join('');
 
       const titleEl = document.createElement('p');
-      titleEl.style.cssText = 'font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1);';
+      titleEl.style.cssText =
+        'font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-1);';
       titleEl.textContent = `${icon} ${reminder.title}`;
 
       const dateEl = document.createElement('p');
-      dateEl.style.cssText = 'font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-2);';
+      dateEl.style.cssText =
+        'font-size: var(--text-xs); color: var(--text-muted); margin-bottom: var(--space-2);';
       dateEl.textContent = new Date(reminder.startDate).toLocaleDateString('en-IN', {
-        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       });
 
       const calLink = document.createElement('a');

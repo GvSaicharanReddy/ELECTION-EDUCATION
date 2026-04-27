@@ -24,6 +24,14 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ['three'],
+          gemini: ['@google/generative-ai']
+        }
+      }
+    }
   },
   server: {
     port: 3000,

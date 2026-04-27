@@ -10,11 +10,7 @@
  */
 
 import { SafeApiClient } from './api-client';
-import {
-  CoachMessage,
-  GeminiToolDeclaration,
-  ToolCallResult,
-} from '../types/index';
+import { CoachMessage, GeminiToolDeclaration, ToolCallResult } from '../types/index';
 import { sanitizeFull } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
 import { ElectionAnalyticsService } from './analytics';
@@ -25,8 +21,7 @@ import { ElectionAnalyticsService } from './analytics';
 export const ELECTION_TOOLS: readonly GeminiToolDeclaration[] = [
   {
     name: 'translate_text',
-    description:
-      'Translate English text to a local Indian language like Hindi, Telugu, or Tamil.',
+    description: 'Translate English text to a local Indian language like Hindi, Telugu, or Tamil.',
     parameters: {
       type: 'object',
       properties: {
@@ -45,13 +40,14 @@ export const ELECTION_TOOLS: readonly GeminiToolDeclaration[] = [
   {
     name: 'find_polling_location',
     description:
-      'Find the nearest polling booth, election office, or voter registration centre using Google Maps based on the voter\'s location or PIN code.',
+      "Find the nearest polling booth, election office, or voter registration centre using Google Maps based on the voter's location or PIN code.",
     parameters: {
       type: 'object',
       properties: {
         query: {
           type: 'string',
-          description: 'Search query such as "polling booth near me" or "election office in Mumbai"',
+          description:
+            'Search query such as "polling booth near me" or "election office in Mumbai"',
         },
         pin_code: {
           type: 'string',
@@ -70,7 +66,7 @@ export const ELECTION_TOOLS: readonly GeminiToolDeclaration[] = [
       properties: {
         search_query: {
           type: 'string',
-          description: 'The voter\'s question or search keywords',
+          description: "The voter's question or search keywords",
         },
       },
       required: ['search_query'],
@@ -78,8 +74,7 @@ export const ELECTION_TOOLS: readonly GeminiToolDeclaration[] = [
   },
   {
     name: 'check_voter_eligibility',
-    description:
-      'Check if a person is eligible to vote based on their age and citizenship status.',
+    description: 'Check if a person is eligible to vote based on their age and citizenship status.',
     parameters: {
       type: 'object',
       properties: {
@@ -239,7 +234,9 @@ export class ElectionCoachService {
    * Initialize the Election Coach Gemini Service.
    */
   constructor() {
-    this.apiKey = String(import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY || '');
+    this.apiKey = String(
+      import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY || '',
+    );
     this.model = String(import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash');
     this.client = new SafeApiClient({
       baseUrl: 'https://generativelanguage.googleapis.com',
@@ -312,8 +309,24 @@ export class ElectionCoachService {
    */
   private async callGeminiApi(query: string): Promise<string | null> {
     const endpoint = `/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`;
+    const body = this.buildGeminiRequest(query);
+    const response = await this.client.post<GeminiApiResponse>(endpoint, body);
 
-    const body = {
+    if (!response.ok || !response.data?.candidates?.[0]) {
+      return null;
+    }
+
+    return this.processGeminiResponse(response.data.candidates[0].content.parts);
+  }
+
+  /**
+   * Build the request body for Gemini API.
+   *
+   * @param query - Sanitised user query.
+   * @returns Request body object.
+   */
+  private buildGeminiRequest(query: string): object {
+    return {
       contents: [
         {
           role: 'user',
@@ -329,26 +342,17 @@ export class ElectionCoachService {
           })),
         },
       ],
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 1024,
-        topP: 0.8,
-      },
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024, topP: 0.8 },
     };
+  }
 
-    const response = await this.client.post<GeminiApiResponse>(endpoint, body);
-
-    if (!response.ok || !response.data) {
-      return null;
-    }
-
-    const candidate = response.data.candidates?.[0];
-    if (!candidate) {
-      return null;
-    }
-
-    // Extract text and tool calls
-    const parts = candidate.content.parts;
+  /**
+   * Process the response parts from Gemini API.
+   *
+   * @param parts - Array of response parts.
+   * @returns Processed response string.
+   */
+  private processGeminiResponse(parts: GeminiPart[]): string | null {
     const textParts = parts.filter((p): p is GeminiPart & { text: string } => !!p.text);
     const toolParts = parts.filter(
       (p): p is GeminiPart & { functionCall: { name: string; args: Record<string, unknown> } } =>
@@ -357,11 +361,13 @@ export class ElectionCoachService {
 
     let responseText = textParts.map((p) => p.text).join('\n');
 
-    // Process tool calls
     if (toolParts.length > 0) {
       const toolResults = toolParts.map((p) => this.processToolCall(p.functionCall));
       const toolSummary = toolResults
-        .map((r) => `[${r.toolName}]: ${r.status === 'success' ? String(r.result) : 'Service unavailable'}`)
+        .map(
+          (r) =>
+            `[${r.toolName}]: ${r.status === 'success' ? String(r.result) : 'Service unavailable'}`,
+        )
         .join('\n');
       responseText += `\n\n${toolSummary}`;
     }
@@ -415,10 +421,7 @@ export class ElectionCoachService {
    * @param content - Message content.
    * @returns Typed CoachMessage.
    */
-  private createMessage(
-    role: 'user' | 'assistant' | 'system',
-    content: string,
-  ): CoachMessage {
+  private createMessage(role: 'user' | 'assistant' | 'system', content: string): CoachMessage {
     return {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       role,

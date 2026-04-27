@@ -29,7 +29,10 @@ const HTML_ESCAPE_REGEX = /[&<>"'/`]/g;
  */
 export function escapeHtml(input: string): string {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
-  return input.replace(HTML_ESCAPE_REGEX, (char) => HTML_ESCAPE_MAP[char as keyof typeof HTML_ESCAPE_MAP] as string);
+  return input.replace(
+    HTML_ESCAPE_REGEX,
+    (char) => HTML_ESCAPE_MAP[char],
+  );
 }
 
 /**
@@ -82,10 +85,8 @@ export function sanitizeUrl(url: string): string {
     return '';
   } catch {
     // Relative URLs are allowed
-    if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('.')) {
-      return trimmed;
-    }
-    return '';
+    const isRelative = /^[/#.]/.test(trimmed);
+    return isRelative ? trimmed : '';
   }
 }
 

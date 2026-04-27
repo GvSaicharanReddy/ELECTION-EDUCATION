@@ -1,6 +1,3 @@
-import { validateVoterAge } from '../utils/validate';
-import { announce } from '../utils/a11y';
-
 /**
  * Eligibility Checker Widget — Interactive tool for checking voter age.
  *
@@ -8,9 +5,24 @@ import { announce } from '../utils/a11y';
  *
  * @module ui/EligibilityCheckerWidget
  */
-export class EligibilityCheckerWidget {
-  private container: HTMLElement;
 
+import { validateVoterAge } from '../utils/validate';
+import { announce } from '../utils/a11y';
+
+/**
+ * Widget that allows voters to interactively check their voting eligibility
+ * based on age, per Election Commission of India guidelines.
+ */
+export class EligibilityCheckerWidget {
+  private readonly container: HTMLElement;
+
+  /**
+   * Initialize the Eligibility Checker widget.
+   *
+   * Locates or creates the container element and renders the form.
+   *
+   * @throws {Error} If the #election-journey element is missing from the DOM.
+   */
   constructor() {
     let el = document.getElementById('eligibility-checker-container');
     if (!el) {
@@ -28,6 +40,9 @@ export class EligibilityCheckerWidget {
     this.render();
   }
 
+  /**
+   * Render the age eligibility form into the container element.
+   */
   private render(): void {
     this.container.innerHTML = `
       <div class="card" style="margin-bottom: var(--space-6); border-left: 3px solid var(--green-india);">
@@ -57,6 +72,9 @@ export class EligibilityCheckerWidget {
     this.setupListeners();
   }
 
+  /**
+   * Attach the form submit handler for age validation.
+   */
   private setupListeners(): void {
     const form = this.container.querySelector('#eligibility-form');
     const input = this.container.querySelector('#age-input') as HTMLInputElement;
@@ -66,15 +84,15 @@ export class EligibilityCheckerWidget {
       e.preventDefault();
       const age = parseInt(input.value, 10);
       const result = validateVoterAge(age);
-      
+
       if (!result.isValid) {
         resultDiv.style.color = 'var(--error)';
         resultDiv.textContent = result.errors.join(' ');
         announce(result.errors.join(' '), 'assertive');
       } else {
         resultDiv.style.color = age >= 18 ? 'var(--success)' : 'var(--warning)';
-        resultDiv.textContent = result.sanitizedValue || '';
-        announce(result.sanitizedValue || '');
+        resultDiv.textContent = result.sanitizedValue ?? '';
+        announce(result.sanitizedValue ?? '');
       }
     });
   }

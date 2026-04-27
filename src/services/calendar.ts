@@ -17,8 +17,8 @@ import { sanitizeFull } from '../utils/sanitize';
 export interface ElectionReminder {
   readonly title: string;
   readonly description: string;
-  readonly startDate: string;  // ISO 8601: YYYY-MM-DD
-  readonly endDate?: string;   // ISO 8601: YYYY-MM-DD
+  readonly startDate: string; // ISO 8601: YYYY-MM-DD
+  readonly endDate?: string; // ISO 8601: YYYY-MM-DD
   readonly isDeadline: boolean;
   readonly category: 'registration' | 'polling' | 'counting' | 'deadline' | 'general';
 }
@@ -121,9 +121,7 @@ export class ElectionCalendarService {
    * @param category - Reminder category to filter by.
    * @returns Filtered reminders.
    */
-  getRemindersByCategory(
-    category: ElectionReminder['category'],
-  ): readonly ElectionReminder[] {
+  getRemindersByCategory(category: ElectionReminder['category']): readonly ElectionReminder[] {
     return ELECTION_REMINDERS.filter((r) => r.category === category);
   }
 

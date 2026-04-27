@@ -7,12 +7,7 @@
  * @module state/store
  */
 
-import {
-  AppState,
-  StateSubscriber,
-  JourneyStageId,
-  ElectionCategory,
-} from '../types/index';
+import { AppState, StateSubscriber, JourneyStageId, ElectionCategory } from '../types/index';
 import { prefersReducedMotion } from '../utils/a11y';
 
 /**
@@ -43,6 +38,9 @@ export class ElectionStore {
   private state: AppState;
   private readonly subscribers: Set<StateSubscriber>;
 
+  /**
+   * Initialize the store with default application state.
+   */
   constructor() {
     this.state = createInitialState();
     this.subscribers = new Set();

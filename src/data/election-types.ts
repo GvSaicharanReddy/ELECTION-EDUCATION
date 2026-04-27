@@ -9,11 +9,7 @@
  * @module data/election-types
  */
 
-import {
-  ElectionCategory,
-  ElectionType,
-  GovernanceLevel,
-} from '../types/index';
+import { ElectionCategory, ElectionType, GovernanceLevel } from '../types/index';
 
 /**
  * Complete catalogue of Indian election types.
@@ -27,10 +23,11 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
     fullName: 'Lok Sabha (House of the People) General Elections',
     governanceLevel: GovernanceLevel.NATIONAL,
     description:
-      'The Lok Sabha is the lower house of India\'s Parliament. Members are directly elected by citizens through universal adult suffrage. The party or coalition with a majority forms the Central Government and its leader becomes the Prime Minister.',
+      "The Lok Sabha is the lower house of India's Parliament. Members are directly elected by citizens through universal adult suffrage. The party or coalition with a majority forms the Central Government and its leader becomes the Prime Minister.",
     frequency: 'Every 5 years (unless dissolved earlier)',
     totalSeats: 543,
-    votingMethod: 'First Past the Post (FPTP) — direct voting via Electronic Voting Machines (EVMs) with VVPAT verification',
+    votingMethod:
+      'First Past the Post (FPTP) — direct voting via Electronic Voting Machines (EVMs) with VVPAT verification',
     conductedBy: 'Election Commission of India (ECI)',
     ageRequirement: 18,
     keyFacts: [
@@ -52,7 +49,7 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
     fullName: 'Rajya Sabha (Council of States) Elections',
     governanceLevel: GovernanceLevel.NATIONAL,
     description:
-      'The Rajya Sabha is the upper house of India\'s Parliament. Members are elected indirectly by elected members of State Legislative Assemblies and Union Territory assemblies. It is a permanent body — not subject to dissolution — with one-third of members retiring every two years.',
+      "The Rajya Sabha is the upper house of India's Parliament. Members are elected indirectly by elected members of State Legislative Assemblies and Union Territory assemblies. It is a permanent body — not subject to dissolution — with one-third of members retiring every two years.",
     frequency: 'Biennial elections (one-third of seats every 2 years)',
     totalSeats: 245,
     votingMethod: 'Single Transferable Vote (STV) by elected MLAs — proportional representation',
@@ -65,7 +62,7 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
       'Elected by elected members of State Legislative Assemblies (MLAs)',
       'Candidate minimum age: 30 years',
       'Uses open ballot system with Single Transferable Vote',
-      'Each state\'s representation is proportional to its population',
+      "Each state's representation is proportional to its population",
       'Vice President of India serves as ex-officio Chairman',
       'Cannot introduce Money Bills but can suggest amendments',
       'Special powers to declare a subject in the State List as a matter of national importance (Article 249)',
@@ -81,7 +78,8 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
     frequency: 'Every 5 years per state (schedules vary by state)',
     totalSeats: 'Varies by state (60–403 seats)',
     votingMethod: 'First Past the Post (FPTP) — direct voting via EVMs with VVPAT',
-    conductedBy: 'Election Commission of India (ECI) in coordination with State Election Commissions',
+    conductedBy:
+      'Election Commission of India (ECI) in coordination with State Election Commissions',
     ageRequirement: 18,
     keyFacts: [
       '28 states and 3 Union Territories (Delhi, Puducherry, J&K) have Legislative Assemblies',
@@ -105,7 +103,8 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
       'Panchayat elections form the backbone of rural self-governance in India under the 73rd Constitutional Amendment (1992). They operate at three tiers: Gram Panchayat (village), Panchayat Samiti / Block Panchayat (block/taluk), and Zila Parishad (district). These elections empower rural citizens to choose local leaders who handle development, welfare, and public services.',
     frequency: 'Every 5 years per state (schedules managed by State Election Commissions)',
     totalSeats: 'Varies by state — over 2.5 lakh Panchayats across India',
-    votingMethod: 'Direct voting for Gram Panchayat members; indirect/direct for block and district levels (varies by state)',
+    votingMethod:
+      'Direct voting for Gram Panchayat members; indirect/direct for block and district levels (varies by state)',
     conductedBy: 'State Election Commissions (SEC) — constitutionally mandated under Article 243K',
     ageRequirement: 18,
     keyFacts: [
@@ -124,13 +123,15 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
   {
     id: ElectionCategory.MUNICIPAL,
     name: 'Municipal',
-    fullName: 'Urban Local Body (ULB) Elections — Nagar Panchayat, Municipality & Municipal Corporation',
+    fullName:
+      'Urban Local Body (ULB) Elections — Nagar Panchayat, Municipality & Municipal Corporation',
     governanceLevel: GovernanceLevel.LOCAL,
     description:
       'Municipal elections govern urban areas under the 74th Constitutional Amendment (1992). They operate at three levels: Nagar Panchayat (transitional/small town), Municipal Council / Nagar Palika (medium town), and Municipal Corporation / Nagar Nigam (large city). Elected councillors and mayors/chairpersons manage urban services, infrastructure, and local development.',
     frequency: 'Every 5 years per state/city (schedules managed by State Election Commissions)',
     totalSeats: 'Varies by city/town — wards determined by population',
-    votingMethod: 'Direct voting for ward councillors; Mayor/Chairperson elected directly or by councillors (varies by state)',
+    votingMethod:
+      'Direct voting for ward councillors; Mayor/Chairperson elected directly or by councillors (varies by state)',
     conductedBy: 'State Election Commissions (SEC) — constitutionally mandated under Article 243ZA',
     ageRequirement: 18,
     keyFacts: [
@@ -156,7 +157,8 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
     frequency: 'As needed — within 6 months of vacancy arising',
     totalSeats: '1 per vacancy (single constituency)',
     votingMethod: 'Same as the original election type for that seat (FPTP with EVMs and VVPAT)',
-    conductedBy: 'Election Commission of India (ECI) for Lok Sabha/Rajya Sabha; State Election Commission may assist for Assembly seats',
+    conductedBy:
+      'Election Commission of India (ECI) for Lok Sabha/Rajya Sabha; State Election Commission may assist for Assembly seats',
     ageRequirement: 18,
     keyFacts: [
       'Triggered by death, resignation, disqualification, or court-ordered voiding of an election',
@@ -166,7 +168,7 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
       'Same constituency boundaries and voter rolls as the last general election',
       'Model Code of Conduct applies in the specific constituency',
       'By-election winners serve only the remainder of the original term',
-      'Often seen as a referendum on the ruling government\'s mid-term performance',
+      "Often seen as a referendum on the ruling government's mid-term performance",
       'Can shift the balance of power in closely divided legislatures',
       'Voter turnout in by-elections is typically lower than in general elections',
     ],
@@ -179,9 +181,7 @@ export const ELECTION_TYPES: readonly ElectionType[] = [
  * @param category - The election category to find.
  * @returns The matching ElectionType or undefined.
  */
-export function getElectionTypeById(
-  category: ElectionCategory,
-): ElectionType | undefined {
+export function getElectionTypeById(category: ElectionCategory): ElectionType | undefined {
   return ELECTION_TYPES.find((t) => t.id === category);
 }
 
@@ -191,8 +191,6 @@ export function getElectionTypeById(
  * @param level - The governance level to filter by.
  * @returns Array of matching election types.
  */
-export function getElectionTypesByLevel(
-  level: GovernanceLevel,
-): readonly ElectionType[] {
+export function getElectionTypesByLevel(level: GovernanceLevel): readonly ElectionType[] {
   return ELECTION_TYPES.filter((t) => t.governanceLevel === level);
 }

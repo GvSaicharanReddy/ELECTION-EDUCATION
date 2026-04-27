@@ -92,7 +92,10 @@ const FAQ_KEYWORD_MAP: readonly { keywords: readonly string[]; index: number }[]
   { keywords: ['register', 'registration', 'form 6', 'enrol', 'nvsp'], index: 1 },
   { keywords: ['nota', 'none of the above', 'dissatisfaction'], index: 2 },
   { keywords: ['evm', 'vvpat', 'voting machine', 'electronic voting'], index: 3 },
-  { keywords: ['polling booth', 'booth', 'poll location', 'election office', 'voter slip'], index: 4 },
+  {
+    keywords: ['polling booth', 'booth', 'poll location', 'election office', 'voter slip'],
+    index: 4,
+  },
 ] as const;
 
 /* ---- Service ---- */
@@ -113,9 +116,7 @@ export class ElectionVertexService {
    */
   constructor() {
     this.apiKey = String(
-      import.meta.env.VITE_GEMINI_API_KEY ||
-        import.meta.env.VITE_GEMINI_KEY ||
-        '',
+      import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY || '',
     );
 
     this.client = new SafeApiClient({
@@ -248,9 +249,7 @@ export class ElectionVertexService {
   private keywordFallback(query: string): SemanticFaqMatch | null {
     const lower = query.toLowerCase();
 
-    const match = FAQ_KEYWORD_MAP.find((entry) =>
-      entry.keywords.some((kw) => lower.includes(kw)),
-    );
+    const match = FAQ_KEYWORD_MAP.find((entry) => entry.keywords.some((kw) => lower.includes(kw)));
 
     if (match === undefined) {
       return null;

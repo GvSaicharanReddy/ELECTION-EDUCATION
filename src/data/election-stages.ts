@@ -156,7 +156,7 @@ export const ELECTION_STAGES: readonly JourneyStage[] = [
         order: 5,
         title: 'ADR & Election Watch',
         description:
-          'The Association for Democratic Reforms (ADR) provides independent analysis of candidates\' criminal and financial backgrounds.',
+          "The Association for Democratic Reforms (ADR) provides independent analysis of candidates' criminal and financial backgrounds.",
         actionLabel: 'Visit ADR',
         actionUrl: 'https://adrindia.org/',
       },
@@ -310,7 +310,7 @@ export const ELECTION_STAGES: readonly JourneyStage[] = [
         order: 5,
         title: 'Receive Ballot & Vote',
         description:
-          'The presiding officer will direct you to the EVM inside the voting compartment. Press the button next to your chosen candidate\'s name and symbol. The VVPAT slip will be visible for 7 seconds.',
+          "The presiding officer will direct you to the EVM inside the voting compartment. Press the button next to your chosen candidate's name and symbol. The VVPAT slip will be visible for 7 seconds.",
       },
       {
         order: 6,
@@ -325,7 +325,7 @@ export const ELECTION_STAGES: readonly JourneyStage[] = [
     title: 'After You Vote',
     subtitle: 'Track results, verify, and stay engaged',
     description:
-      'Your civic duty doesn\'t end at the polling booth. Learn how to track results, understand the government formation process, file complaints if needed, and stay engaged in democracy between elections.',
+      "Your civic duty doesn't end at the polling booth. Learn how to track results, understand the government formation process, file complaints if needed, and stay engaged in democracy between elections.",
     icon: '📊',
     color: '#000080',
     ariaLabel: 'Stage 7: After voting — results, government formation, and civic engagement',
@@ -368,7 +368,7 @@ export const ELECTION_STAGES: readonly JourneyStage[] = [
         order: 6,
         title: 'Stay Civically Engaged',
         description:
-          'Democracy is a continuous process. Attend Gram Sabha meetings, track your elected representative\'s performance, participate in public hearings, and vote in every election — local and national.',
+          "Democracy is a continuous process. Attend Gram Sabha meetings, track your elected representative's performance, participate in public hearings, and vote in every election — local and national.",
       },
     ],
   },

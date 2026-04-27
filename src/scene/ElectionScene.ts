@@ -16,13 +16,13 @@ import { store } from '../state/store';
 
 /** Stage node colours matching the Indian palette. */
 const STAGE_COLOURS: Record<JourneyStageId, number> = {
-  [JourneyStageId.ELIGIBILITY]: 0xff9933,    // Saffron
-  [JourneyStageId.REGISTRATION]: 0xffffff,   // White
-  [JourneyStageId.CANDIDATES]: 0x138808,     // Green
-  [JourneyStageId.VOTING_METHODS]: 0x000080,  // Navy
-  [JourneyStageId.TIMELINE]: 0xff9933,       // Saffron
-  [JourneyStageId.POLLING_DAY]: 0x138808,    // Green
-  [JourneyStageId.POST_VOTE]: 0x000080,      // Navy
+  [JourneyStageId.ELIGIBILITY]: 0xff9933, // Saffron
+  [JourneyStageId.REGISTRATION]: 0xffffff, // White
+  [JourneyStageId.CANDIDATES]: 0x138808, // Green
+  [JourneyStageId.VOTING_METHODS]: 0x000080, // Navy
+  [JourneyStageId.TIMELINE]: 0xff9933, // Saffron
+  [JourneyStageId.POLLING_DAY]: 0x138808, // Green
+  [JourneyStageId.POST_VOTE]: 0x000080, // Navy
 };
 
 /** Metadata for a 3D stage node. */
@@ -42,17 +42,23 @@ interface StageNode {
  * accessible DOM fallback via the global state store.
  */
 export class ElectionScene {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
+  private readonly scene: THREE.Scene;
+  private readonly camera: THREE.PerspectiveCamera;
+  private readonly renderer: THREE.WebGLRenderer;
+  private readonly raycaster: THREE.Raycaster;
+  private readonly mouse: THREE.Vector2;
+  private readonly isReducedMotion: boolean;
   private stageNodes: StageNode[];
   private particles: THREE.Points;
   private animationId: number;
-  private isReducedMotion: boolean;
-  private raycaster: THREE.Raycaster;
-  private mouse: THREE.Vector2;
   private targetCameraPos: THREE.Vector3;
 
+  /**
+   * Create and mount the Election Scene into the given container.
+   *
+   * @param container - The HTMLElement to render the WebGL canvas into.
+   * @throws {Error} If WebGL is unavailable or the renderer fails to initialise.
+   */
   constructor(container: HTMLElement) {
     this.isReducedMotion = prefersReducedMotion();
     this.stageNodes = [];
@@ -188,7 +194,11 @@ export class ElectionScene {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 128;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      // Return an empty sprite if 2D context is unavailable
+      return new THREE.Sprite(new THREE.SpriteMaterial());
+    }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = 'bold 36px "Segoe UI", system-ui, sans-serif';
@@ -222,9 +232,7 @@ export class ElectionScene {
   private createPathLine(): THREE.Line {
     const points = this.stageNodes.map((n) => n.position);
     const curve = new THREE.CatmullRomCurve3(points);
-    const geometry = new THREE.BufferGeometry().setFromPoints(
-      curve.getPoints(100),
-    );
+    const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(100));
     const material = new THREE.LineBasicMaterial({
       color: 0x333366,
       transparent: true,
@@ -251,10 +259,7 @@ export class ElectionScene {
     }
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute(
-      'position',
-      new THREE.BufferAttribute(positions, 3),
-    );
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const material = new THREE.PointsMaterial({
       color: 0x6666aa,

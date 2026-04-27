@@ -18,14 +18,20 @@ import { announce } from '../utils/a11y';
  * a list of fallback location suggestions.
  */
 export class MapsWidget {
-  private maps: ElectionMapsService;
+  private readonly maps: ElectionMapsService;
 
+  /**
+   * Initialize the Maps widget and begin loading the Google Maps API.
+   */
   constructor() {
     this.maps = new ElectionMapsService();
     this.render();
     void this.initializeMap();
   }
 
+  /**
+   * Asynchronously load the Maps API and show the map embed.
+   */
   private async initializeMap(): Promise<void> {
     const loaded = await this.maps.loadMapsApi();
     if (loaded) {
@@ -134,7 +140,8 @@ export class MapsWidget {
       return;
     }
 
-    results.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: var(--space-4);">🔍 Searching for polling locations...</p>';
+    results.innerHTML =
+      '<p style="text-align: center; color: var(--text-muted); padding: var(--space-4);">🔍 Searching for polling locations...</p>';
     announce('Searching for polling locations near ' + sanitised);
 
     const response = await this.maps.searchPollingLocations(sanitised);
