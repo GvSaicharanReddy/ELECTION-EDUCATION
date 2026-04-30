@@ -28,7 +28,6 @@ const HTML_ESCAPE_REGEX = /[&<>"'/`]/g;
  * @returns HTML-safe string.
  */
 export function escapeHtml(input: string): string {
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
   return input.replace(
     HTML_ESCAPE_REGEX,
     (char) => HTML_ESCAPE_MAP[char],
@@ -111,7 +110,6 @@ export function truncate(input: string, maxLength: number = 2000): string {
  * @returns String with control characters removed.
  */
 export function removeControlChars(input: string): string {
-  // eslint-disable-next-line no-control-regex
   return input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 

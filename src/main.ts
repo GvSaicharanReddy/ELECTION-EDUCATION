@@ -25,9 +25,22 @@ import { ElectionAnalyticsService } from './services/analytics';
 import { ElectionVertexService } from './services/vertex';
 import { store } from './state/store';
 import { announce, onReducedMotionChange, prefersReducedMotion } from './utils/a11y';
+import { logger } from './utils/logger';
 
-/** Track initialised modules for cleanup. */
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+/** Intersection ratio at which a section is considered "active" for nav highlighting. */
+const SCROLL_SPY_THRESHOLD = 0.3;
+
+/** Log context label for the bootstrap module. */
+const LOG_CTX = 'Bootstrap';
+
+// ─── Module State ─────────────────────────────────────────────────────────────
+
+/** Track initialised scene for cleanup on reduced-motion toggle. */
 let scene: ElectionScene | null = null;
+
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
 
 /**
  * Bootstrap the Election Saathi India application.
@@ -36,23 +49,18 @@ let scene: ElectionScene | null = null;
  * 1. Accessible fallback (always first — ensures a11y from the start)
  * 2. 3D scene (progressive enhancement)
  * 3. Coach panel, Translation, Maps widgets
+ * 4. Google Cloud services (Analytics, Vertex AI)
+ * 5. Global event listeners
  *
- * @throws Error if the #app root element is missing.
+ * @throws {Error} If the `#app` root element is missing from the DOM.
  */
 function bootstrap(): void {
   const appContainer = document.getElementById('app');
   if (!appContainer) {
-    throw new Error('[ElectionSaathi] #app root element not found.');
+    throw new Error('Bootstrap: #app root element not found in DOM.');
   }
 
-  // 1. Accessible fallback — always renders first
-  try {
-    new AccessibleFallback();
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[ElectionSaathi] Accessible fallback failed to initialise:', e);
-  }
-
+  initAccessibleFallback();
   init3DScene(appContainer);
   initWidgets();
   initCloudServices();
@@ -60,7 +68,22 @@ function bootstrap(): void {
 }
 
 /**
- * Initialize 3D scene (progressive enhancement).
+ * Initialise the accessible DOM fallback layer.
+ * Always runs first to guarantee content is available before JS enhancements.
+ */
+function initAccessibleFallback(): void {
+  try {
+    new AccessibleFallback();
+  } catch (err) {
+    logger.warn(LOG_CTX, 'Accessible fallback failed to initialise', err);
+  }
+}
+
+/**
+ * Initialize the 3D WebGL scene as a progressive enhancement.
+ * Falls back gracefully when WebGL is unavailable or reduced-motion is active.
+ *
+ * @param appContainer - The root `#app` DOM element.
  */
 function init3DScene(appContainer: HTMLElement): void {
   const shouldEnable3D = !prefersReducedMotion() && supportsWebGL();
@@ -68,9 +91,8 @@ function init3DScene(appContainer: HTMLElement): void {
     try {
       scene = new ElectionScene(appContainer);
       store.setState({ is3DEnabled: true });
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn('[ElectionSaathi] 3D scene failed to initialise:', e);
+    } catch (err) {
+      logger.warn(LOG_CTX, '3D scene failed to initialise', err);
       store.setState({ is3DEnabled: false });
       appContainer.setAttribute('aria-hidden', 'true');
     }
@@ -83,55 +105,68 @@ function init3DScene(appContainer: HTMLElement): void {
 
 /**
  * Initialize all standard UI widgets.
+ * Each widget is initialised independently so a single failure cannot cascade.
  */
 function initWidgets(): void {
-  const widgets = [
-    { name: 'Coach Panel', constructor: ElectionCoachPanel },
-    { name: 'Translation Widget', constructor: TranslationWidget },
-    { name: 'Maps Widget', constructor: MapsWidget },
-    { name: 'Calendar Widget', constructor: CalendarWidget },
-    { name: 'Eligibility Checker', constructor: EligibilityCheckerWidget },
+  const widgets: Array<{ name: string; constructor: new () => unknown }> = [
+    { name: 'CoachPanel', constructor: ElectionCoachPanel },
+    { name: 'TranslationWidget', constructor: TranslationWidget },
+    { name: 'MapsWidget', constructor: MapsWidget },
+    { name: 'CalendarWidget', constructor: CalendarWidget },
+    { name: 'EligibilityChecker', constructor: EligibilityCheckerWidget },
   ];
 
   for (const { name, constructor } of widgets) {
     try {
       new constructor();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn(`[ElectionSaathi] ${name} failed:`, e);
+    } catch (err) {
+      logger.warn(LOG_CTX, `${name} failed to initialise`, err);
     }
   }
 }
 
 /**
- * Initialize Google Cloud Analytics and Vertex services.
+ * Initialize Google Cloud Analytics (Natural Language API + Firestore)
+ * and Vertex AI text-embedding services.
  */
 function initCloudServices(): void {
+  initAnalytics();
+  initVertexAI();
+}
+
+/**
+ * Initialise the Google Cloud Natural Language API analytics service.
+ */
+function initAnalytics(): void {
   try {
     const analytics = new ElectionAnalyticsService();
     if (analytics.isConfigured()) {
-      // eslint-disable-next-line no-console
-      console.info('[ElectionSaathi] Google Cloud Analytics (NL API + Firestore) active.');
+      logger.info(LOG_CTX, 'Google Cloud Analytics (NL API + Firestore) active');
     }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[ElectionSaathi] Analytics service failed:', e);
-  }
-
-  try {
-    const vertex = new ElectionVertexService();
-    if (vertex.isConfigured()) {
-      // eslint-disable-next-line no-console
-      console.info('[ElectionSaathi] Vertex AI text-embedding service active.');
-    }
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('[ElectionSaathi] Vertex AI service failed:', e);
+  } catch (err) {
+    logger.warn(LOG_CTX, 'Analytics service failed to initialise', err);
   }
 }
 
 /**
- * Set up global event listeners.
+ * Initialise the Vertex AI semantic FAQ embedding service.
+ */
+function initVertexAI(): void {
+  try {
+    const vertex = new ElectionVertexService();
+    if (vertex.isConfigured()) {
+      logger.info(LOG_CTX, 'Vertex AI text-embedding service active');
+    }
+  } catch (err) {
+    logger.warn(LOG_CTX, 'Vertex AI service failed to initialise', err);
+  }
+}
+
+/**
+ * Set up global event listeners:
+ * - Reduced-motion media query changes
+ * - Scroll-spy intersection observer
+ * - ARIA live region announcement
  */
 function initListeners(): void {
   onReducedMotionChange((reduced) => {
@@ -143,19 +178,17 @@ function initListeners(): void {
     }
   });
 
-  // Announce app ready
   announce(
     'Election Saathi India is ready. Navigate through the election journey to learn about Indian elections.',
   );
 
-  // Scroll spy for nav
   setupScrollSpy();
 }
 
 /**
- * Check if the browser supports WebGL.
+ * Check if the browser supports WebGL (v2 or v1 fallback).
  *
- * @returns True if WebGL is available.
+ * @returns `true` if WebGL rendering context is available.
  */
 function supportsWebGL(): boolean {
   try {
@@ -167,7 +200,8 @@ function supportsWebGL(): boolean {
 }
 
 /**
- * Set up intersection observer for scroll-based nav highlighting.
+ * Set up an IntersectionObserver to highlight the active nav section on scroll.
+ * No-ops gracefully when no `<section id>` elements exist.
  */
 function setupScrollSpy(): void {
   const sections = document.querySelectorAll('main > section[id]');
@@ -183,7 +217,7 @@ function setupScrollSpy(): void {
         }
       });
     },
-    { threshold: 0.3 },
+    { threshold: SCROLL_SPY_THRESHOLD },
   );
 
   sections.forEach((section) => observer.observe(section));

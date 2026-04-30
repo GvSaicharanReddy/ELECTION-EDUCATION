@@ -61,7 +61,19 @@ export class MapsWidget {
     widget.setAttribute('role', 'region');
     widget.setAttribute('aria-label', 'Find polling locations using Google Maps');
 
-    widget.innerHTML = `
+    widget.innerHTML = this.getWidgetTemplate();
+
+    coach.appendChild(widget);
+    this.setupEventListeners(widget);
+  }
+
+  /**
+   * Get the HTML template for the Maps widget.
+   *
+   * @returns HTML string.
+   */
+  private getWidgetTemplate(): string {
+    return `
       <h3 style="color: var(--navy); margin-bottom: var(--space-3);">
         📍 Find Election Offices & Polling Booths
         <span style="font-size: var(--text-xs); color: var(--text-muted); font-weight: 400;">— powered by Google Maps</span>
@@ -101,9 +113,6 @@ export class MapsWidget {
         <!-- Maps embed loads here -->
       </div>
     `;
-
-    coach.appendChild(widget);
-    this.setupEventListeners(widget);
   }
 
   /**
