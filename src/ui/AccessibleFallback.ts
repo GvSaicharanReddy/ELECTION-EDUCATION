@@ -367,22 +367,15 @@ export class AccessibleFallback {
    * Determine the next tab index based on key press.
    */
   private getNextTabIndex(key: string, current: number, max: number): number {
-    const isNext = key === 'ArrowRight' || key === 'ArrowDown';
-    const isPrev = key === 'ArrowLeft' || key === 'ArrowUp';
-    
-    if (isNext) {
-      return (current + 1) % max;
-    }
-    if (isPrev) {
-      return (current - 1 + max) % max;
-    }
-    if (key === 'Home') {
-      return 0;
-    }
-    if (key === 'End') {
-      return max - 1;
-    }
-    return -1;
+    const actions: Record<string, () => number> = {
+      ArrowRight: () => (current + 1) % max,
+      ArrowDown: () => (current + 1) % max,
+      ArrowLeft: () => (current - 1 + max) % max,
+      ArrowUp: () => (current - 1 + max) % max,
+      Home: () => 0,
+      End: () => max - 1,
+    };
+    return actions[key] ? actions[key]() : -1;
   }
 
   /**
