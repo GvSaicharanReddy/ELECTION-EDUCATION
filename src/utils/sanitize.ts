@@ -84,18 +84,17 @@ export function sanitizeUrl(url: string): string {
     return '';
   }
   const trimmed = url.trim();
-  const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:'];
+  
+  if (/^[/#.]/.test(trimmed)) {
+    return trimmed;
+  }
 
   try {
     const parsed = new URL(trimmed);
-    if (ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
-      return trimmed;
-    }
-    return '';
+    const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:'];
+    return ALLOWED_PROTOCOLS.includes(parsed.protocol) ? trimmed : '';
   } catch {
-    // Relative URLs are allowed
-    const isRelative = /^[/#.]/.test(trimmed);
-    return isRelative ? trimmed : '';
+    return '';
   }
 }
 

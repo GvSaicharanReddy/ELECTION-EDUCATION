@@ -112,7 +112,10 @@ export function validateStageId(stageId: unknown): ValidationResult {
  * @returns Validation result with eligibility message.
  */
 export function validateVoterAge(age: unknown): ValidationResult {
-  if (typeof age !== 'number' || Number.isNaN(age)) {
+  if (typeof age !== 'number') {
+    return { isValid: false, errors: ['Age must be a valid number.'] };
+  }
+  if (Number.isNaN(age)) {
     return { isValid: false, errors: ['Age must be a valid number.'] };
   }
 
@@ -121,15 +124,18 @@ export function validateVoterAge(age: unknown): ValidationResult {
     return { isValid: false, errors: numericErrors };
   }
 
-  const isEligible = age >= VOTING_AGE;
-  const waitYears = VOTING_AGE - age;
+  return buildAgeResult(age);
+}
 
+function buildAgeResult(age: number): ValidationResult {
+  if (age >= VOTING_AGE) {
+    return { isValid: true, errors: [], sanitizedValue: `You are ${age} years old. You are eligible to vote!` };
+  }
+  const waitYears = VOTING_AGE - age;
   return {
     isValid: true,
     errors: [],
-    sanitizedValue: isEligible
-      ? `You are ${age} years old. You are eligible to vote!`
-      : `You are ${age} years old. You must be ${VOTING_AGE} or older to vote. You will be eligible in ${waitYears} year(s).`,
+    sanitizedValue: `You are ${age} years old. You must be ${VOTING_AGE} or older to vote. You will be eligible in ${waitYears} year(s).`,
   };
 }
 

@@ -242,23 +242,30 @@ export class AccessibleFallback {
     }
 
     const events = getAllTimelineEvents();
+    timeline.innerHTML = events.map((e) => this.renderTimelineEvent(e)).join('');
+  }
 
-    timeline.innerHTML = events
-      .map(
-        (event) => `
-      <div class="card" role="listitem" style="margin-bottom: var(--space-3); border-left: 3px solid ${this.getEventBorderColor(String(event.priority))};">
+  /**
+   * Render a single timeline event.
+   */
+  private renderTimelineEvent(event: any): string {
+    const borderColor = this.getEventBorderColor(String(event.priority));
+    const bg = event.isDeadline ? 'var(--error)' : 'var(--bg-elevated)';
+    const color = event.isDeadline ? 'white' : 'var(--text-secondary)';
+    const label = event.isDeadline ? '⚠ Deadline' : event.priority;
+
+    return `
+      <div class="card" role="listitem" style="margin-bottom: var(--space-3); border-left: 3px solid ${borderColor};">
         <div style="display: flex; justify-content: space-between; align-items: start;">
           <h3 style="font-size: var(--text-lg); color: var(--navy);">${escapeHtml(event.title)}</h3>
-          <span style="font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: ${event.isDeadline ? 'var(--error)' : 'var(--bg-elevated)'}; color: ${event.isDeadline ? 'white' : 'var(--text-secondary)'};">
-            ${event.isDeadline ? '⚠ Deadline' : event.priority}
+          <span style="font-size: var(--text-xs); padding: var(--space-1) var(--space-2); border-radius: var(--radius-full); background: ${bg}; color: ${color};">
+            ${label}
           </span>
         </div>
         <p style="color: var(--text-muted); font-size: var(--text-sm); margin: var(--space-1) 0;">${escapeHtml(event.date)}</p>
         <p style="color: var(--text-secondary);">${escapeHtml(event.description)}</p>
       </div>
-    `,
-      )
-      .join('');
+    `;
   }
 
   /**
