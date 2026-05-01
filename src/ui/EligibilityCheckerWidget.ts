@@ -7,6 +7,9 @@
  */
 
 import { validateVoterAge } from '../utils/validate';
+
+/** Minimum age required to vote. */
+const VOTING_AGE_THRESHOLD = 18;
 import { announce } from '../utils/a11y';
 
 /**
@@ -90,7 +93,7 @@ export class EligibilityCheckerWidget {
         resultDiv.textContent = result.errors.join(' ');
         announce(result.errors.join(' '), 'assertive');
       } else {
-        resultDiv.style.color = age >= 18 ? 'var(--success)' : 'var(--warning)';
+        resultDiv.style.color = age >= VOTING_AGE_THRESHOLD ? 'var(--success)' : 'var(--warning)';
         resultDiv.textContent = result.sanitizedValue ?? '';
         announce(result.sanitizedValue ?? '');
       }

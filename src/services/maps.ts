@@ -13,11 +13,38 @@ import { PollingLocation, ApiResponse } from '../types/index';
 import { sanitizeFull } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
 
+/** Default map centre — New Delhi (India Gate), latitude. */
+const INDIA_CENTRE_LAT = 28.6139;
+
+/** Default map centre — New Delhi (India Gate), longitude. */
+const INDIA_CENTRE_LNG = 77.209;
+
 /** Default map centre — New Delhi (India Gate). */
-const INDIA_CENTRE = { lat: 28.6139, lng: 77.209 };
+const INDIA_CENTRE = { lat: INDIA_CENTRE_LAT, lng: INDIA_CENTRE_LNG };
 
 /** Default zoom level for city-level view. */
 const DEFAULT_ZOOM = 12;
+
+/** Maximum number of place results to return. */
+const MAX_PLACE_RESULTS = 5;
+
+/** Cache TTL for map results in milliseconds (30 minutes). */
+const MAPS_CACHE_TTL_MS = 1800000;
+
+/** Maximum cache entries for map results. */
+const MAPS_MAX_CACHE_ENTRIES = 20;
+
+/** Geolocation timeout in milliseconds (10 seconds). */
+const GEO_TIMEOUT_MS = 10000;
+
+/** Maximum age for cached geolocation position in milliseconds (5 minutes). */
+const GEO_MAX_AGE_MS = 300000;
+
+/** HTTP OK status code. */
+const HTTP_OK = 200;
+
+/** Maximum length for maps search queries. */
+const MAPS_INPUT_MAX_LENGTH = 200;
 
 /**
  * Google Maps service for election-related location assistance.
@@ -40,8 +67,8 @@ export class ElectionMapsService {
       import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_MAPS_KEY || '',
     );
     this.cache = new ElectionCache<PollingLocation[]>({
-      defaultTtlMs: 30 * 60 * 1000, // 30 minutes
-      maxEntries: 20,
+      defaultTtlMs: MAPS_CACHE_TTL_MS,
+      maxEntries: MAPS_MAX_CACHE_ENTRIES,
     });
     this.mapInstance = null;
     this.isLoaded = false;
@@ -128,13 +155,13 @@ export class ElectionMapsService {
    * @returns Array of matching polling locations.
    */
   async searchPollingLocations(query: string): Promise<ApiResponse<PollingLocation[]>> {
-    const sanitised = sanitizeFull(query, 200);
+    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
     const cacheKey = makeCacheKey('maps', sanitised.toLowerCase());
 
     // Check cache
     const cached = this.cache.get(cacheKey);
     if (cached) {
-      return { ok: true, data: cached, error: null, status: 200 };
+      return { ok: true, data: cached, error: null, status: HTTP_OK };
     }
 
     // If Maps API is loaded and map exists, use Places API
@@ -144,7 +171,7 @@ export class ElectionMapsService {
 
     // Fallback: return sample locations
     const fallback = this.getFallbackLocations(sanitised);
-    return { ok: true, data: fallback, error: null, status: 200 };
+    return { ok: true, data: fallback, error: null, status: HTTP_OK };
   }
 
   /**
@@ -197,7 +224,7 @@ export class ElectionMapsService {
       return { ok: false, data: null, error: errorMsg, status: 0 };
     }
 
-    const locations: PollingLocation[] = results.slice(0, 5).map((place) => ({
+    const locations: PollingLocation[] = results.slice(0, MAX_PLACE_RESULTS).map((place) => ({
       name: place.name ?? 'Unknown Location',
       address: place.formatted_address ?? 'Address unavailable',
       latitude: place.geometry?.location?.lat() ?? 0,
@@ -207,7 +234,7 @@ export class ElectionMapsService {
     this.cache.set(cacheKey, locations);
     this.addMarkersToMap(locations);
 
-    return { ok: true, data: locations, error: null, status: 200 };
+    return { ok: true, data: locations, error: null, status: HTTP_OK };
   }
 
   /**
@@ -238,7 +265,7 @@ export class ElectionMapsService {
    * @returns Google Maps embed URL.
    */
   generateMapsEmbedUrl(query: string): string {
-    const sanitised = sanitizeFull(query, 200);
+    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
     const encoded = encodeURIComponent(`${sanitised} election office India`);
 
     if (this.apiKey) {
@@ -256,7 +283,7 @@ export class ElectionMapsService {
    * @returns Google Maps URL that opens in a new tab.
    */
   generateMapsLink(query: string): string {
-    const sanitised = sanitizeFull(query, 200);
+    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
     return `https://www.google.com/maps/search/${encodeURIComponent(sanitised + ' election office India')}`;
   }
 
@@ -312,7 +339,7 @@ export class ElectionMapsService {
         () => {
           resolve(null);
         },
-        { timeout: 10000, maximumAge: 300000 },
+        { timeout: GEO_TIMEOUT_MS, maximumAge: GEO_MAX_AGE_MS },
       );
     });
   }

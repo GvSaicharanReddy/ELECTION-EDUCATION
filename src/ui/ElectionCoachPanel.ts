@@ -12,6 +12,9 @@ import { sanitizeFull } from '../utils/sanitize';
 import { validateCoachQuery } from '../utils/validate';
 import { announce } from '../utils/a11y';
 
+/** Maximum characters of coach response to include in screen reader announcement. */
+const ANNOUNCE_MAX_LENGTH = 200;
+
 /**
  * The Election Coach chat panel.
  *
@@ -43,7 +46,7 @@ export class ElectionCoachPanel {
   private render(): void {
     this.container.innerHTML = `
       <div id="coach-chat" class="card" style="max-width: 640px; margin: 0 auto;">
-        <div id="coach-messages" role="log" aria-label="Election Coach conversation" aria-live="polite" style="max-height: 400px; overflow-y: auto; margin-bottom: var(--space-4);">
+        <div id="coach-messages" role="log" aria-label="Election Coach conversation" aria-live="polite" aria-atomic="false" aria-busy="false" style="max-height: 400px; overflow-y: auto; margin-bottom: var(--space-4);">
           <div class="coach-message coach-assistant" style="padding: var(--space-3); background: var(--bg-elevated); border-radius: var(--radius-md); margin-bottom: var(--space-3);">
             <p style="color: var(--navy); font-weight: 600; margin-bottom: var(--space-1);">🏛️ Official Helpdesk</p>
             <p style="color: var(--text-secondary);">Namaste! I'm your Election Assistant. Ask me anything about Indian elections — eligibility, registration, EVMs, polling booths, or any election type. How can I help you today?</p>
@@ -51,12 +54,12 @@ export class ElectionCoachPanel {
         </div>
 
         <div id="coach-suggestions" style="display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3);">
-          <button class="btn btn-secondary coach-suggestion" data-query="Am I eligible to vote?">Am I eligible?</button>
-          <button class="btn btn-secondary coach-suggestion" data-query="How do I register to vote online?">Register to vote</button>
-          <button class="btn btn-secondary coach-suggestion" data-query="Where is my polling booth?">Find my booth</button>
-          <button class="btn btn-secondary coach-suggestion" data-query="What is NOTA?">About NOTA</button>
-          <button class="btn btn-secondary coach-suggestion" data-query="Tell me about Lok Sabha elections">Lok Sabha</button>
-          <button class="btn btn-secondary coach-suggestion" data-query="How do panchayat elections work?">Panchayat</button>
+          <button class="btn btn-secondary coach-suggestion" data-query="Am I eligible to vote?" aria-label="Ask: Am I eligible to vote?">Am I eligible?</button>
+          <button class="btn btn-secondary coach-suggestion" data-query="How do I register to vote online?" aria-label="Ask: How do I register to vote online?">Register to vote</button>
+          <button class="btn btn-secondary coach-suggestion" data-query="Where is my polling booth?" aria-label="Ask: Where is my polling booth?">Find my booth</button>
+          <button class="btn btn-secondary coach-suggestion" data-query="What is NOTA?" aria-label="Ask: What is NOTA?">About NOTA</button>
+          <button class="btn btn-secondary coach-suggestion" data-query="Tell me about Lok Sabha elections" aria-label="Ask: Tell me about Lok Sabha elections">Lok Sabha</button>
+          <button class="btn btn-secondary coach-suggestion" data-query="How do panchayat elections work?" aria-label="Ask: How do panchayat elections work?">Panchayat</button>
         </div>
 
         <form id="coach-form" role="search" aria-label="Ask the Election Coach a question">
@@ -132,6 +135,7 @@ export class ElectionCoachPanel {
     this.appendMessage('user', sanitised);
 
     // Show loading state
+    this.setMessagesBusy(true);
     const loadingId = this.appendMessage('assistant', '🤔 Thinking about your question...');
 
     // Get response
@@ -139,9 +143,10 @@ export class ElectionCoachPanel {
 
     // Replace loading with actual response
     this.replaceMessage(loadingId, response.content);
+    this.setMessagesBusy(false);
 
     // Announce response
-    announce(`Election Coach: ${response.content.slice(0, 200)}`);
+    announce(`Election Coach: ${response.content.slice(0, ANNOUNCE_MAX_LENGTH)}`);
   }
 
   /**
@@ -199,6 +204,18 @@ export class ElectionCoachPanel {
   }
 
   /**
+   * Set aria-busy state on the messages container.
+   *
+   * @param busy - Whether an async operation is in progress.
+   */
+  private setMessagesBusy(busy: boolean): void {
+    const messages = document.getElementById('coach-messages');
+    if (messages) {
+      messages.setAttribute('aria-busy', String(busy));
+    }
+  }
+
+  /**
    * Helper to get CSS text for a message.
    * @param isUser - true if message is from user
    * @returns CSS text
@@ -209,3 +226,4 @@ export class ElectionCoachPanel {
     return `padding: var(--space-3); background: ${bg}; border-radius: var(--radius-md); margin-bottom: var(--space-3); ${border}`;
   }
 }
+

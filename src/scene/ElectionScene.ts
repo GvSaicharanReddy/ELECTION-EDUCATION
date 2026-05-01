@@ -14,6 +14,142 @@ import { ELECTION_STAGES } from '../data/election-stages';
 import { prefersReducedMotion } from '../utils/a11y';
 import { store } from '../state/store';
 
+/* ── Scene Numeric Constants ──────────────────────────────────────────── */
+
+/** Background / fog colour. */
+const BG_COLOUR = 0x0a0a1a;
+/** Fog density exponent. */
+const FOG_DENSITY = 0.035;
+/** Camera field-of-view in degrees. */
+const CAMERA_FOV = 60;
+/** Camera near clip plane. */
+const CAMERA_NEAR = 0.1;
+/** Camera far clip plane. */
+const CAMERA_FAR = 100;
+/** Default camera Y offset. */
+const CAMERA_DEFAULT_Y = 2;
+/** Default camera Z offset. */
+const CAMERA_DEFAULT_Z = 12;
+/** Maximum device-pixel-ratio clamp. */
+const MAX_PIXEL_RATIO = 2;
+
+/** Ambient light colour. */
+const AMBIENT_COLOUR = 0x404060;
+/** Ambient light intensity. */
+const AMBIENT_INTENSITY = 0.6;
+/** Directional light colour. */
+const DIR_LIGHT_COLOUR = 0xffffff;
+/** Directional light intensity. */
+const DIR_LIGHT_INTENSITY = 0.8;
+/** Directional light X position. */
+const DIR_LIGHT_X = 5;
+/** Directional light Y position. */
+const DIR_LIGHT_Y = 10;
+/** Directional light Z position. */
+const DIR_LIGHT_Z = 5;
+/** Point light colour. */
+const POINT_LIGHT_COLOUR = 0xff9933;
+/** Point light intensity. */
+const POINT_LIGHT_INTENSITY = 0.5;
+/** Point light distance. */
+const POINT_LIGHT_DIST = 20;
+/** Point light Y position. */
+const POINT_LIGHT_Y = 5;
+
+/** Node radius for dodecahedron. */
+const NODE_RADIUS = 0.5;
+/** Dodecahedron detail level. */
+const NODE_DETAIL = 0;
+/** Node emissive intensity (default). */
+const NODE_EMISSIVE = 0.3;
+/** Node shininess. */
+const NODE_SHININESS = 80;
+/** Node base opacity. */
+const NODE_OPACITY = 0.9;
+/** Curve spread multiplier for S-curve X. */
+const CURVE_SPREAD_X = 16;
+/** Y-amplitude for S-curve. */
+const CURVE_AMP_Y = 1.5;
+/** Z-depth for S-curve. */
+const CURVE_DEPTH_Z = 2;
+
+/** Glow sphere radius. */
+const GLOW_RADIUS = 0.8;
+/** Glow sphere segments. */
+const GLOW_SEGMENTS = 16;
+/** Glow base opacity. */
+const GLOW_OPACITY = 0.1;
+/** Label Y-offset above node. */
+const LABEL_Y_OFFSET = 1.0;
+
+/** Sprite scale X. */
+const SPRITE_SCALE_X = 3;
+/** Sprite scale Y. */
+const SPRITE_SCALE_Y = 0.75;
+/** Sprite scale Z. */
+const SPRITE_SCALE_Z = 1;
+
+/** Canvas width for text sprites. */
+const CANVAS_WIDTH = 512;
+/** Canvas height for text sprites. */
+const CANVAS_HEIGHT = 128;
+/** Font size for canvas text rendering. */
+const CANVAS_FONT_SIZE = 36;
+/** Hex string padding length. */
+const HEX_PAD_LENGTH = 6;
+
+/** Path line colour. */
+const PATH_COLOUR = 0x333366;
+/** Path line opacity. */
+const PATH_OPACITY = 0.5;
+/** Number of interpolation points on the path curve. */
+const PATH_POINTS = 100;
+
+/** Particle count. */
+const PARTICLE_COUNT = 500;
+/** Vertex stride in positions array. */
+const VERTEX_STRIDE = 3;
+/** Particle X spread. */
+const PARTICLE_SPREAD_X = 30;
+/** Particle Y spread. */
+const PARTICLE_SPREAD_Y = 15;
+/** Particle Z spread. */
+const PARTICLE_SPREAD_Z = 20;
+/** Particle colour. */
+const PARTICLE_COLOUR = 0x6666aa;
+/** Particle size. */
+const PARTICLE_SIZE = 0.05;
+/** Particle opacity. */
+const PARTICLE_OPACITY = 0.6;
+
+/** Camera focus Y offset. */
+const FOCUS_Y_OFFSET = 2;
+/** Camera focus Z offset. */
+const FOCUS_Z_OFFSET = 6;
+/** Active node emissive intensity. */
+const ACTIVE_EMISSIVE = 0.6;
+/** Active glow opacity. */
+const ACTIVE_GLOW_OPACITY = 0.25;
+/** Inactive node emissive intensity. */
+const INACTIVE_EMISSIVE = 0.2;
+/** Inactive glow opacity. */
+const INACTIVE_GLOW_OPACITY = 0.08;
+
+/** Camera lerp factor (smoothness). */
+const CAMERA_LERP = 0.03;
+/** Time-to-seconds divisor. */
+const TIME_DIVISOR = 0.001;
+/** Node Y-rotation speed. */
+const ROTATION_SPEED_Y = 0.3;
+/** Node rotation index offset. */
+const ROTATION_INDEX_OFFSET = 0.5;
+/** Node X-rotation speed. */
+const ROTATION_SPEED_X = 0.2;
+/** Node X-rotation amplitude. */
+const ROTATION_AMP_X = 0.1;
+/** Particle drift rotation speed. */
+const PARTICLE_DRIFT_SPEED = 0.02;
+
 /** Stage node colours matching the Indian palette. */
 const STAGE_COLOURS: Record<JourneyStageId, number> = {
   [JourneyStageId.ELIGIBILITY]: 0xff9933, // Saffron
@@ -52,6 +188,7 @@ export class ElectionScene {
   private particles: THREE.Points;
   private animationId: number;
   private targetCameraPos: THREE.Vector3;
+  private readonly cleanupFns: Array<() => void>;
 
   /**
    * Create and mount the Election Scene into the given container.
@@ -63,21 +200,22 @@ export class ElectionScene {
     this.isReducedMotion = prefersReducedMotion();
     this.stageNodes = [];
     this.animationId = 0;
+    this.cleanupFns = [];
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
-    this.targetCameraPos = new THREE.Vector3(0, 2, 12);
+    this.targetCameraPos = new THREE.Vector3(0, CAMERA_DEFAULT_Y, CAMERA_DEFAULT_Z);
 
     // Scene setup
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0a1a);
-    this.scene.fog = new THREE.FogExp2(0x0a0a1a, 0.035);
+    this.scene.background = new THREE.Color(BG_COLOUR);
+    this.scene.fog = new THREE.FogExp2(BG_COLOUR, FOG_DENSITY);
 
     // Camera
     this.camera = new THREE.PerspectiveCamera(
-      60,
+      CAMERA_FOV,
       container.clientWidth / container.clientHeight,
-      0.1,
-      100,
+      CAMERA_NEAR,
+      CAMERA_FAR,
     );
     this.camera.position.copy(this.targetCameraPos);
 
@@ -88,7 +226,7 @@ export class ElectionScene {
       powerPreference: 'high-performance',
     });
     this.renderer.setSize(container.clientWidth, container.clientHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO));
     container.appendChild(this.renderer.domElement);
 
     // Build scene content
@@ -101,9 +239,10 @@ export class ElectionScene {
     this.setupEventListeners(container);
 
     // Subscribe to state
-    store.subscribe((state) => {
+    const unsubscribe = store.subscribe((state) => {
       this.focusOnStage(state.currentStage);
     });
+    this.cleanupFns.push(unsubscribe);
 
     // Start render loop
     this.animate();
@@ -114,15 +253,15 @@ export class ElectionScene {
    * Uses ambient + directional for clean visibility.
    */
   private addLighting(): void {
-    const ambient = new THREE.AmbientLight(0x404060, 0.6);
+    const ambient = new THREE.AmbientLight(AMBIENT_COLOUR, AMBIENT_INTENSITY);
     this.scene.add(ambient);
 
-    const directional = new THREE.DirectionalLight(0xffffff, 0.8);
-    directional.position.set(5, 10, 5);
+    const directional = new THREE.DirectionalLight(DIR_LIGHT_COLOUR, DIR_LIGHT_INTENSITY);
+    directional.position.set(DIR_LIGHT_X, DIR_LIGHT_Y, DIR_LIGHT_Z);
     this.scene.add(directional);
 
-    const point = new THREE.PointLight(0xff9933, 0.5, 20);
-    point.position.set(0, 5, 0);
+    const point = new THREE.PointLight(POINT_LIGHT_COLOUR, POINT_LIGHT_INTENSITY, POINT_LIGHT_DIST);
+    point.position.set(0, POINT_LIGHT_Y, 0);
     this.scene.add(point);
   }
 
@@ -139,20 +278,20 @@ export class ElectionScene {
     ELECTION_STAGES.forEach((stage, index) => {
       // Position nodes in a gentle S-curve
       const t = index / (ELECTION_STAGES.length - 1);
-      const x = (t - 0.5) * 16;
-      const y = Math.sin(t * Math.PI * 2) * 1.5;
-      const z = Math.cos(t * Math.PI) * 2;
+      const x = (t - NODE_RADIUS) * CURVE_SPREAD_X;
+      const y = Math.sin(t * Math.PI * MAX_PIXEL_RATIO) * CURVE_AMP_Y;
+      const z = Math.cos(t * Math.PI) * CURVE_DEPTH_Z;
       const position = new THREE.Vector3(x, y, z);
 
       // Main mesh: dodecahedron (procedural, 12-sided)
-      const geometry = new THREE.DodecahedronGeometry(0.5, 0);
+      const geometry = new THREE.DodecahedronGeometry(NODE_RADIUS, NODE_DETAIL);
       const material = new THREE.MeshPhongMaterial({
         color: STAGE_COLOURS[stage.id],
         emissive: STAGE_COLOURS[stage.id],
-        emissiveIntensity: 0.3,
-        shininess: 80,
+        emissiveIntensity: NODE_EMISSIVE,
+        shininess: NODE_SHININESS,
         transparent: true,
-        opacity: 0.9,
+        opacity: NODE_OPACITY,
       });
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.copy(position);
@@ -160,11 +299,11 @@ export class ElectionScene {
       this.scene.add(mesh);
 
       // Glow sphere (larger, transparent)
-      const glowGeometry = new THREE.SphereGeometry(0.8, 16, 16);
+      const glowGeometry = new THREE.SphereGeometry(GLOW_RADIUS, GLOW_SEGMENTS, GLOW_SEGMENTS);
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: STAGE_COLOURS[stage.id],
         transparent: true,
-        opacity: 0.1,
+        opacity: GLOW_OPACITY,
       });
       const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
       glowMesh.position.copy(position);
@@ -173,7 +312,7 @@ export class ElectionScene {
       // Text label sprite (procedurally generated via canvas)
       const label = this.createTextSprite(stage.title, STAGE_COLOURS[stage.id]);
       label.position.copy(position);
-      label.position.y += 1.0;
+      label.position.y += LABEL_Y_OFFSET;
       this.scene.add(label);
 
       nodes.push({ stageId: stage.id, mesh, position, glowMesh, label });
@@ -192,8 +331,8 @@ export class ElectionScene {
    */
   private createTextSprite(text: string, colour: number): THREE.Sprite {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 128;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       // Return an empty sprite if 2D context is unavailable
@@ -201,12 +340,12 @@ export class ElectionScene {
     }
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.font = 'bold 36px "Segoe UI", system-ui, sans-serif';
+    ctx.font = `bold ${CANVAS_FONT_SIZE}px "Segoe UI", system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     // Convert hex to CSS
-    const hex = `#${colour.toString(16).padStart(6, '0')}`;
+    const hex = `#${colour.toString(GLOW_SEGMENTS).padStart(HEX_PAD_LENGTH, '0')}`;
     ctx.fillStyle = hex;
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
@@ -219,7 +358,7 @@ export class ElectionScene {
       depthTest: false,
     });
     const sprite = new THREE.Sprite(material);
-    sprite.scale.set(3, 0.75, 1);
+    sprite.scale.set(SPRITE_SCALE_X, SPRITE_SCALE_Y, SPRITE_SCALE_Z);
 
     return sprite;
   }
@@ -232,11 +371,11 @@ export class ElectionScene {
   private createPathLine(): THREE.Line {
     const points = this.stageNodes.map((n) => n.position);
     const curve = new THREE.CatmullRomCurve3(points);
-    const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(100));
+    const geometry = new THREE.BufferGeometry().setFromPoints(curve.getPoints(PATH_POINTS));
     const material = new THREE.LineBasicMaterial({
-      color: 0x333366,
+      color: PATH_COLOUR,
       transparent: true,
-      opacity: 0.5,
+      opacity: PATH_OPACITY,
     });
     const line = new THREE.Line(geometry, material);
     this.scene.add(line);
@@ -249,23 +388,22 @@ export class ElectionScene {
    * @returns Three.js Points object.
    */
   private createParticleField(): THREE.Points {
-    const count = 500;
-    const positions = new Float32Array(count * 3);
+    const positions = new Float32Array(PARTICLE_COUNT * VERTEX_STRIDE);
 
-    for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 30;
-      positions[i * 3 + 1] = (Math.random() - 0.5) * 15;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 20;
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      positions[i * VERTEX_STRIDE] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_X;
+      positions[i * VERTEX_STRIDE + 1] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Y;
+      positions[i * VERTEX_STRIDE + CURVE_DEPTH_Z] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Z;
     }
 
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, VERTEX_STRIDE));
 
     const material = new THREE.PointsMaterial({
-      color: 0x6666aa,
-      size: 0.05,
+      color: PARTICLE_COLOUR,
+      size: PARTICLE_SIZE,
       transparent: true,
-      opacity: 0.6,
+      opacity: PARTICLE_OPACITY,
     });
 
     const points = new THREE.Points(geometry, material);
@@ -286,8 +424,8 @@ export class ElectionScene {
 
     this.targetCameraPos = new THREE.Vector3(
       node.position.x,
-      node.position.y + 2,
-      node.position.z + 6,
+      node.position.y + FOCUS_Y_OFFSET,
+      node.position.z + FOCUS_Z_OFFSET,
     );
 
     // Highlight active node
@@ -295,11 +433,11 @@ export class ElectionScene {
       const mat = n.mesh.material as THREE.MeshPhongMaterial;
       const glowMat = n.glowMesh.material as THREE.MeshBasicMaterial;
       if (n.stageId === stageId) {
-        mat.emissiveIntensity = 0.6;
-        glowMat.opacity = 0.25;
+        mat.emissiveIntensity = ACTIVE_EMISSIVE;
+        glowMat.opacity = ACTIVE_GLOW_OPACITY;
       } else {
-        mat.emissiveIntensity = 0.2;
-        glowMat.opacity = 0.08;
+        mat.emissiveIntensity = INACTIVE_EMISSIVE;
+        glowMat.opacity = INACTIVE_GLOW_OPACITY;
       }
     });
   }
@@ -311,19 +449,19 @@ export class ElectionScene {
     this.animationId = requestAnimationFrame(() => this.animate());
 
     // Smooth camera interpolation
-    this.camera.position.lerp(this.targetCameraPos, 0.03);
+    this.camera.position.lerp(this.targetCameraPos, CAMERA_LERP);
     this.camera.lookAt(0, 0, 0);
 
     if (!this.isReducedMotion) {
       // Gentle rotation of stage nodes
-      const time = Date.now() * 0.001;
+      const time = Date.now() * TIME_DIVISOR;
       this.stageNodes.forEach((node, i) => {
-        node.mesh.rotation.y = time * 0.3 + i * 0.5;
-        node.mesh.rotation.x = Math.sin(time * 0.2 + i) * 0.1;
+        node.mesh.rotation.y = time * ROTATION_SPEED_Y + i * ROTATION_INDEX_OFFSET;
+        node.mesh.rotation.x = Math.sin(time * ROTATION_SPEED_X + i) * ROTATION_AMP_X;
       });
 
       // Particle drift
-      this.particles.rotation.y = time * 0.02;
+      this.particles.rotation.y = time * PARTICLE_DRIFT_SPEED;
     }
 
     this.renderer.render(this.scene, this.camera);
@@ -335,13 +473,13 @@ export class ElectionScene {
    * @param container - The DOM container element.
    */
   private setupEventListeners(container: HTMLElement): void {
-    // Resize
     const handleResize = (): void => {
       this.camera.aspect = container.clientWidth / container.clientHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(container.clientWidth, container.clientHeight);
     };
     window.addEventListener('resize', handleResize);
+    this.cleanupFns.push(() => window.removeEventListener('resize', handleResize));
 
     // Click/tap on stage nodes
     const handleClick = (event: MouseEvent): void => {
@@ -359,6 +497,7 @@ export class ElectionScene {
       }
     };
     container.addEventListener('click', handleClick);
+    this.cleanupFns.push(() => container.removeEventListener('click', handleClick));
   }
 
   /**
@@ -366,6 +505,8 @@ export class ElectionScene {
    */
   dispose(): void {
     cancelAnimationFrame(this.animationId);
+    this.cleanupFns.forEach((fn) => fn());
+    this.cleanupFns.length = 0;
     this.renderer.dispose();
     this.scene.clear();
   }

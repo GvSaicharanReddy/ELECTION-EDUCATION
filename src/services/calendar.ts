@@ -66,6 +66,15 @@ export const ELECTION_REMINDERS: readonly ElectionReminder[] = [
   },
 ] as const;
 
+/** Length of the ISO 8601 date portion (YYYY-MM-DD = 10 chars). */
+const ISO_DATE_LENGTH = 10;
+
+/** Maximum length for calendar event titles. */
+const CALENDAR_TITLE_MAX_LENGTH = 200;
+
+/** Maximum length for calendar event descriptions. */
+const CALENDAR_DESC_MAX_LENGTH = 1000;
+
 /* ---- Service ---- */
 
 /**
@@ -86,8 +95,8 @@ export class ElectionCalendarService {
    * @returns Google Calendar add-event URL string.
    */
   generateCalendarLink(reminder: ElectionReminder): string {
-    const safeTitle = sanitizeFull(reminder.title, 200);
-    const safeDesc = sanitizeFull(reminder.description, 1000);
+    const safeTitle = sanitizeFull(reminder.title, CALENDAR_TITLE_MAX_LENGTH);
+    const safeDesc = sanitizeFull(reminder.description, CALENDAR_DESC_MAX_LENGTH);
 
     // Format: YYYYMMDD for all-day events
     const startFormatted = this.formatDateForCalendar(reminder.startDate);
@@ -144,7 +153,7 @@ export class ElectionCalendarService {
   private getNextDay(date: string): string {
     const d = new Date(date);
     d.setDate(d.getDate() + 1);
-    const next = d.toISOString().slice(0, 10);
+    const next = d.toISOString().slice(0, ISO_DATE_LENGTH);
     return next.replace(/-/g, '');
   }
 }

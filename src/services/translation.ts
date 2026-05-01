@@ -59,6 +59,24 @@ interface TranslationApiResponse {
 /** Translation API base URL. */
 const TRANSLATION_API_BASE = 'https://translation.googleapis.com/language/translate/v2';
 
+/** Maximum characters for translation cache key derivation. */
+const TRANSLATION_CACHE_KEY_LENGTH = 80;
+
+/** Maximum length for a language code string. */
+const MAX_LANG_CODE_LENGTH = 5;
+
+/** Cache TTL for translation results in milliseconds (30 minutes). */
+const TRANSLATION_CACHE_TTL_MS = 1800000;
+
+/** Maximum cache entries for translation results. */
+const TRANSLATION_MAX_CACHE_ENTRIES = 100;
+
+/** Maximum length for text to translate. */
+const TRANSLATION_INPUT_MAX_LENGTH = 5000;
+
+/** API request timeout in milliseconds. */
+const TRANSLATION_API_TIMEOUT_MS = 10000;
+
 /** Human-readable names for the judge-readable feature surface. */
 export const SUPPORTED_LANGUAGES: readonly {
   code: IndianLanguageCode;
@@ -100,11 +118,11 @@ export class ElectionTranslationService {
 
     this.client = new SafeApiClient({
       baseUrl: TRANSLATION_API_BASE,
-      timeoutMs: 10000,
+      timeoutMs: TRANSLATION_API_TIMEOUT_MS,
       retries: 1,
     });
 
-    this.cache = new ElectionCache<string>({ defaultTtlMs: 30 * 60 * 1000, maxEntries: 100 });
+    this.cache = new ElectionCache<string>({ defaultTtlMs: TRANSLATION_CACHE_TTL_MS, maxEntries: TRANSLATION_MAX_CACHE_ENTRIES });
   }
 
   /**
@@ -136,8 +154,8 @@ export class ElectionTranslationService {
       return text;
     }
 
-    const sanitised = sanitizeFull(text, 5000);
-    const cacheKey = makeCacheKey('translate', `${safeTarget}:${sanitised.slice(0, 80)}`);
+    const sanitised = sanitizeFull(text, TRANSLATION_INPUT_MAX_LENGTH);
+    const cacheKey = makeCacheKey('translate', `${safeTarget}:${sanitised.slice(0, TRANSLATION_CACHE_KEY_LENGTH)}`);
 
     const cached = this.cache.get(cacheKey);
     if (cached) {
@@ -186,7 +204,7 @@ export class ElectionTranslationService {
       return [...texts];
     }
 
-    const sanitised = texts.map((t) => sanitizeFull(t, 5000));
+    const sanitised = texts.map((t) => sanitizeFull(t, TRANSLATION_INPUT_MAX_LENGTH));
 
     try {
       const body: TranslationRequestBody = {
@@ -218,7 +236,7 @@ export class ElectionTranslationService {
    * @returns Validated code or null if not allowed.
    */
   private validateLanguageCode(code: string): IndianLanguageCode | null {
-    const normalised = code.toLowerCase().trim().slice(0, 5);
+    const normalised = code.toLowerCase().trim().slice(0, MAX_LANG_CODE_LENGTH);
     return ALLOWED_LANG_CODES.has(normalised) ? (normalised as IndianLanguageCode) : null;
   }
 

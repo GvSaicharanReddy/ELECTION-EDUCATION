@@ -91,6 +91,35 @@ const INTENT_MAP: readonly {
   { keywords: ['date', 'schedule', 'deadline'], intent: 'timeline' },
 ] as const;
 
+/* ---- Numeric Constants ---- */
+
+/** Positive sentiment threshold (NL API score above this = positive). */
+const POSITIVE_SENTIMENT_THRESHOLD = 0.15;
+
+/** Negative sentiment threshold (NL API score below negative of this = negative). */
+const NEGATIVE_SENTIMENT_THRESHOLD = -0.15;
+
+/** Maximum number of entity types to store per event. */
+const MAX_ENTITY_TYPES = 5;
+
+/** Start index for random session ID segment. */
+const SESSION_ID_RAND_START = 2;
+
+/** End index for random session ID segment. */
+const SESSION_ID_RAND_END = 10;
+
+/** API timeout for Natural Language API in milliseconds. */
+const NL_API_TIMEOUT_MS = 10000;
+
+/** API timeout for Firestore REST API in milliseconds. */
+const FIRESTORE_TIMEOUT_MS = 8000;
+
+/** Maximum input length for analytics queries. */
+const ANALYTICS_INPUT_MAX_LENGTH = 500;
+
+/** Base for alphanumeric random string generation. */
+const ALPHANUMERIC_BASE = 36;
+
 /* ---- Service ---- */
 
 /**
@@ -121,13 +150,13 @@ export class ElectionAnalyticsService {
 
     this.nlClient = new SafeApiClient({
       baseUrl: NL_API_BASE,
-      timeoutMs: 10000,
+      timeoutMs: NL_API_TIMEOUT_MS,
       retries: 0,
     });
 
     this.firestoreClient = new SafeApiClient({
       baseUrl: FIRESTORE_BASE,
-      timeoutMs: 8000,
+      timeoutMs: FIRESTORE_TIMEOUT_MS,
       retries: 0,
     });
   }
@@ -146,7 +175,7 @@ export class ElectionAnalyticsService {
       return;
     }
 
-    const sanitised = sanitizeFull(query, 500);
+    const sanitised = sanitizeFull(query, ANALYTICS_INPUT_MAX_LENGTH);
 
     try {
       const [intent, nlResult] = await Promise.all([
@@ -159,7 +188,7 @@ export class ElectionAnalyticsService {
         queryCategory: intent,
         languageCode: nlResult.language ?? 'en',
         timestamp: new Date().toISOString(),
-        entities: nlResult.entities?.slice(0, 5).map((e) => e.type) ?? [],
+        entities: nlResult.entities?.slice(0, MAX_ENTITY_TYPES).map((e) => e.type) ?? [],
         sentiment: this.normaliseSentiment(nlResult.documentSentiment),
       };
 
@@ -257,10 +286,10 @@ export class ElectionAnalyticsService {
       return 'neutral';
     }
 
-    if (sentiment.score > 0.15) {
+    if (sentiment.score > POSITIVE_SENTIMENT_THRESHOLD) {
       return 'positive';
     }
-    if (sentiment.score < -0.15) {
+    if (sentiment.score < NEGATIVE_SENTIMENT_THRESHOLD) {
       return 'negative';
     }
 
@@ -280,7 +309,7 @@ export class ElectionAnalyticsService {
       return crypto.randomUUID();
     }
 
-    return `session-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    return `session-${Date.now()}-${Math.random().toString(ALPHANUMERIC_BASE).slice(SESSION_ID_RAND_START, SESSION_ID_RAND_END)}`;
   }
 
   /**

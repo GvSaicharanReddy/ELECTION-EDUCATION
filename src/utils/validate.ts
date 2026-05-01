@@ -16,6 +16,15 @@ const VALID_CATEGORIES = new Set<string>(Object.values(ElectionCategory));
 /** Allowlist of valid journey stage IDs. */
 const VALID_STAGE_IDS = new Set<string>(Object.values(JourneyStageId));
 
+/** Minimum age required to vote in Indian elections. */
+const VOTING_AGE = 18;
+
+/** Maximum allowed length for coach queries. */
+const MAX_QUERY_LENGTH = 2000;
+
+/** Maximum realistic human age for validation. */
+const MAX_VALID_AGE = 150;
+
 /**
  * Validate an election coach query from the user.
  *
@@ -37,7 +46,7 @@ export function validateCoachQuery(query: unknown): ValidationResult {
     errors.push('Query cannot be empty.');
   }
 
-  if (trimmed.length > 2000) {
+  if (trimmed.length > MAX_QUERY_LENGTH) {
     errors.push('Query must be 2000 characters or fewer.');
   }
 
@@ -112,15 +121,15 @@ export function validateVoterAge(age: unknown): ValidationResult {
     return { isValid: false, errors: numericErrors };
   }
 
-  const isEligible = age >= 18;
-  const waitYears = 18 - age;
+  const isEligible = age >= VOTING_AGE;
+  const waitYears = VOTING_AGE - age;
 
   return {
     isValid: true,
     errors: [],
     sanitizedValue: isEligible
       ? `You are ${age} years old. You are eligible to vote!`
-      : `You are ${age} years old. You must be 18 or older to vote. You will be eligible in ${waitYears} year(s).`,
+      : `You are ${age} years old. You must be ${VOTING_AGE} or older to vote. You will be eligible in ${waitYears} year(s).`,
   };
 }
 
@@ -132,7 +141,7 @@ function getNumericAgeErrors(age: number): string[] {
   if (!Number.isInteger(age)) {
     errors.push('Age must be a whole number.');
   }
-  if (age < 0 || age > 150) {
+  if (age < 0 || age > MAX_VALID_AGE) {
     errors.push('Age must be between 0 and 150.');
   }
   return errors;

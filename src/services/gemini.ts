@@ -213,6 +213,48 @@ const STATIC_RESPONSE_MAP: readonly {
 const DEFAULT_STATIC_RESPONSE =
   'Welcome to Election Saathi India! I can help you with:\n• Checking voter eligibility\n• Registering to vote (Form 6)\n• Understanding EVMs and VVPAT\n• Finding your polling booth\n• Learning about Lok Sabha, Rajya Sabha, State Assembly, Panchayat, and Municipal elections\n• Election timelines and key deadlines\n\nAsk me anything about Indian elections, or visit eci.gov.in for official information!';
 
+/* ---- Generation Configuration Constants ---- */
+
+/** Temperature for Gemini responses (lower = more deterministic). */
+const GEMINI_TEMPERATURE = 0.3;
+
+/** Maximum output token count for Gemini responses. */
+const GEMINI_MAX_OUTPUT_TOKENS = 1024;
+
+/** Top-p nucleus sampling threshold for Gemini. */
+const GEMINI_TOP_P = 0.8;
+
+/** Complete generation config for Gemini API calls. */
+const GEMINI_GENERATION_CONFIG = {
+  temperature: GEMINI_TEMPERATURE,
+  maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+  topP: GEMINI_TOP_P,
+} as const;
+
+/** API request timeout in milliseconds. */
+const GEMINI_TIMEOUT_MS = 30000;
+
+/** Cache TTL in milliseconds (10 minutes). */
+const COACH_CACHE_TTL_MS = 600000;
+
+/** Maximum cache entries for coach responses. */
+const COACH_MAX_CACHE_ENTRIES = 50;
+
+/** Maximum characters to use for cache key derivation. */
+const CACHE_KEY_SLICE_LENGTH = 100;
+
+/** Start index for random message ID segment. */
+const MSG_ID_RANDOM_START = 2;
+
+/** End index for random message ID segment. */
+const MSG_ID_RANDOM_END = 6;
+
+/** Base for alphanumeric random string generation. */
+const ALPHANUMERIC_BASE = 36;
+
+/** Maximum input length for coach queries. */
+const COACH_INPUT_MAX_LENGTH = 2000;
+
 /* ---- Gemini Client ---- */
 
 /**
@@ -240,10 +282,10 @@ export class ElectionCoachService {
     this.model = String(import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash');
     this.client = new SafeApiClient({
       baseUrl: 'https://generativelanguage.googleapis.com',
-      timeoutMs: 30000,
+      timeoutMs: GEMINI_TIMEOUT_MS,
       retries: 1,
     });
-    this.cache = new ElectionCache<string>({ defaultTtlMs: 10 * 60 * 1000, maxEntries: 50 });
+    this.cache = new ElectionCache<string>({ defaultTtlMs: COACH_CACHE_TTL_MS, maxEntries: COACH_MAX_CACHE_ENTRIES });
     this.analytics = new ElectionAnalyticsService();
     this.conversationHistory = [];
   }
@@ -267,8 +309,8 @@ export class ElectionCoachService {
    * @returns The assistant's response message.
    */
   async chat(userMessage: string): Promise<CoachMessage> {
-    const sanitised = sanitizeFull(userMessage, 2000);
-    const cacheKey = makeCacheKey('coach', sanitised.toLowerCase().slice(0, 100));
+    const sanitised = sanitizeFull(userMessage, COACH_INPUT_MAX_LENGTH);
+    const cacheKey = makeCacheKey('coach', sanitised.toLowerCase().slice(0, CACHE_KEY_SLICE_LENGTH));
 
     // Track query with Google Cloud Natural Language API + Firestore analytics
     void this.analytics.trackQuery(sanitised);
@@ -342,7 +384,7 @@ export class ElectionCoachService {
           })),
         },
       ],
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024, topP: 0.8 },
+      generationConfig: GEMINI_GENERATION_CONFIG,
     };
   }
 
@@ -423,7 +465,7 @@ export class ElectionCoachService {
    */
   private createMessage(role: 'user' | 'assistant' | 'system', content: string): CoachMessage {
     return {
-      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: `msg-${Date.now()}-${Math.random().toString(ALPHANUMERIC_BASE).slice(MSG_ID_RANDOM_START, MSG_ID_RANDOM_END)}`,
       role,
       content,
       timestamp: Date.now(),

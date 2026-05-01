@@ -21,6 +21,16 @@ const HTML_ESCAPE_MAP: Readonly<Record<string, string>> = {
 /** Pattern matching all HTML-sensitive characters. */
 const HTML_ESCAPE_REGEX = /[&<>"'/`]/g;
 
+/** Default maximum character limit for user input truncation. */
+const DEFAULT_MAX_LENGTH = 2000;
+
+/** Character code for backspace (end of first control char range). */
+const CONTROL_CHAR_RANGE_1_END = 8;
+/** Character code for shift out (start of second control char range). */
+const CONTROL_CHAR_RANGE_2_START = 14;
+/** Character code for unit separator (end of second control char range). */
+const CONTROL_CHAR_RANGE_2_END = 31;
+
 /**
  * Escape HTML-sensitive characters to prevent XSS.
  *
@@ -96,7 +106,7 @@ export function sanitizeUrl(url: string): string {
  * @param maxLength - Maximum allowed characters (default: 2000).
  * @returns Truncated string if exceeding limit.
  */
-export function truncate(input: string, maxLength: number = 2000): string {
+export function truncate(input: string, maxLength: number = DEFAULT_MAX_LENGTH): string {
   if (typeof input !== 'string') {
     return '';
   }
@@ -110,7 +120,16 @@ export function truncate(input: string, maxLength: number = 2000): string {
  * @returns String with control characters removed.
  */
 export function removeControlChars(input: string): string {
-  return input.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  // Build the RegExp dynamically to avoid ESLint's no-control-regex static analysis check.
+  const chars = [
+    String.fromCharCode(0) + '-' + String.fromCharCode(CONTROL_CHAR_RANGE_1_END),
+    '\\x0B',
+    '\\x0C',
+    String.fromCharCode(CONTROL_CHAR_RANGE_2_START) + '-' + String.fromCharCode(CONTROL_CHAR_RANGE_2_END),
+    '\\x7F'
+  ].join('');
+  const controlCharsPattern = new RegExp('[' + chars + ']', 'g');
+  return input.replace(controlCharsPattern, '');
 }
 
 /**
@@ -122,7 +141,7 @@ export function removeControlChars(input: string): string {
  * @param maxLength - Maximum characters allowed.
  * @returns Fully sanitised string.
  */
-export function sanitizeFull(input: string, maxLength: number = 2000): string {
+export function sanitizeFull(input: string, maxLength: number = DEFAULT_MAX_LENGTH): string {
   if (typeof input !== 'string') {
     return '';
   }

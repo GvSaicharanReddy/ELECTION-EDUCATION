@@ -7,6 +7,15 @@
  * @module utils/a11y
  */
 
+/** Start index for random segment in generated accessible IDs. */
+const A11Y_ID_RAND_START = 2;
+
+/** End index for random segment in generated accessible IDs. */
+const A11Y_ID_RAND_END = 8;
+
+/** Base for alphanumeric random string generation. */
+const ALPHANUMERIC_BASE = 36;
+
 /**
  * Announce a message to screen readers via the ARIA live region.
  *
@@ -145,7 +154,7 @@ export function onReducedMotionChange(callback: (reduced: boolean) => void): () 
  * @returns A unique string ID.
  */
 export function generateA11yId(prefix: string): string {
-  const random = Math.random().toString(36).slice(2, 8);
+  const random = Math.random().toString(ALPHANUMERIC_BASE).slice(A11Y_ID_RAND_START, A11Y_ID_RAND_END);
   return `${prefix}-${random}`;
 }
 

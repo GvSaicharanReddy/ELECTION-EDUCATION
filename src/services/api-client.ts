@@ -9,11 +9,26 @@
 
 import { ApiResponse, FetchConfig } from '../types/index';
 
+/** Default timeout for API requests in milliseconds. */
+const DEFAULT_TIMEOUT_MS = 15000;
+
+/** Default number of retries for failed requests. */
+const DEFAULT_RETRIES = 1;
+
+/** Base delay for exponential backoff in milliseconds. */
+const RETRY_BASE_DELAY_MS = 500;
+
+/** Timeout for Google-specific API requests in milliseconds. */
+const GOOGLE_API_TIMEOUT_MS = 30000;
+
+/** Retry count for Google API requests. */
+const GOOGLE_API_RETRIES = 2;
+
 /** Default configuration for API calls. */
 const DEFAULT_CONFIG: FetchConfig = {
   baseUrl: '',
-  timeoutMs: 15000,
-  retries: 1,
+  timeoutMs: DEFAULT_TIMEOUT_MS,
+  retries: DEFAULT_RETRIES,
 };
 
 /**
@@ -113,7 +128,7 @@ export class SafeApiClient {
         if (attempt === maxRetries) {
           return this.handleFinalError<T>(error);
         }
-        await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * 500));
+        await new Promise((resolve) => setTimeout(resolve, 2 ** attempt * RETRY_BASE_DELAY_MS));
       }
     }
 
@@ -180,7 +195,7 @@ export class SafeApiClient {
 export function createGoogleApiClient(): SafeApiClient {
   return new SafeApiClient({
     baseUrl: 'https://generativelanguage.googleapis.com',
-    timeoutMs: 30000,
-    retries: 2,
+    timeoutMs: GOOGLE_API_TIMEOUT_MS,
+    retries: GOOGLE_API_RETRIES,
   });
 }

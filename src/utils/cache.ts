@@ -9,10 +9,16 @@
 
 import { CacheEntry, CacheConfig } from '../types/index';
 
+/** Default cache TTL in milliseconds (5 minutes). */
+const DEFAULT_TTL_MS = 300000;
+
+/** Default maximum number of cache entries. */
+const DEFAULT_MAX_ENTRIES = 100;
+
 /** Default cache configuration. */
 const DEFAULT_CONFIG: CacheConfig = {
-  defaultTtlMs: 5 * 60 * 1000, // 5 minutes
-  maxEntries: 100,
+  defaultTtlMs: DEFAULT_TTL_MS,
+  maxEntries: DEFAULT_MAX_ENTRIES,
 };
 
 /**

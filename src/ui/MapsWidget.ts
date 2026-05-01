@@ -11,6 +11,9 @@ import { ElectionMapsService } from '../services/maps';
 import { escapeHtml, sanitizeFull } from '../utils/sanitize';
 import { announce } from '../utils/a11y';
 
+/** Maximum input length for map search queries. */
+const MAPS_INPUT_MAX_LENGTH = 200;
+
 /**
  * Maps-based polling location finder widget.
  *
@@ -142,18 +145,20 @@ export class MapsWidget {
    * @param query - Search query.
    */
   private async handleSearch(query: string): Promise<void> {
-    const sanitised = sanitizeFull(query, 200);
+    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
     const results = document.getElementById('maps-results');
 
     if (!results) {
       return;
     }
 
+    results.setAttribute('aria-busy', 'true');
     results.innerHTML =
       '<p style="text-align: center; color: var(--text-muted); padding: var(--space-4);">🔍 Searching for polling locations...</p>';
     announce('Searching for polling locations near ' + sanitised);
 
     const response = await this.maps.searchPollingLocations(sanitised);
+    results.setAttribute('aria-busy', 'false');
 
     if (response.ok && response.data) {
       this.renderSuccessResults(results, response.data, sanitised);

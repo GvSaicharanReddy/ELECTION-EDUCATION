@@ -98,6 +98,23 @@ const FAQ_KEYWORD_MAP: readonly { keywords: readonly string[]; index: number }[]
   },
 ] as const;
 
+/* ---- Constants ---- */
+
+/** Output dimensionality for Vertex AI text embeddings. */
+const EMBEDDING_DIMENSIONALITY = 256;
+
+/** Minimum cosine similarity score to consider a FAQ match relevant. */
+const SIMILARITY_THRESHOLD = 0.5;
+
+/** API request timeout in milliseconds. */
+const VERTEX_TIMEOUT_MS = 15000;
+
+/** Fallback similarity score for keyword-matched FAQ entries. */
+const KEYWORD_FALLBACK_SCORE = 0.6;
+
+/** Maximum length for text input to Vertex AI. */
+const VERTEX_INPUT_MAX_LENGTH = 500;
+
 /* ---- Service ---- */
 
 /**
@@ -121,7 +138,7 @@ export class ElectionVertexService {
 
     this.client = new SafeApiClient({
       baseUrl: `https://us-central1-aiplatform.googleapis.com/v1/projects/${VERTEX_CONFIG.projectId}/locations/${VERTEX_CONFIG.location}/publishers/google/models`,
-      timeoutMs: 15000,
+      timeoutMs: VERTEX_TIMEOUT_MS,
       retries: 1,
     });
   }
@@ -145,7 +162,7 @@ export class ElectionVertexService {
    * @returns Best matching FAQ entry or null.
    */
   async findRelevantFaq(query: string): Promise<SemanticFaqMatch | null> {
-    const sanitised = sanitizeFull(query, 500);
+    const sanitised = sanitizeFull(query, VERTEX_INPUT_MAX_LENGTH);
 
     if (!this.isConfigured()) {
       return this.keywordFallback(sanitised);
@@ -174,7 +191,7 @@ export class ElectionVertexService {
         }
       });
 
-      if (bestScore < 0.5) {
+      if (bestScore < SIMILARITY_THRESHOLD) {
         return this.keywordFallback(sanitised);
       }
 
@@ -200,7 +217,7 @@ export class ElectionVertexService {
     const body = {
       instances: [{ content: text } satisfies EmbeddingInstance],
       parameters: {
-        outputDimensionality: 256,
+        outputDimensionality: EMBEDDING_DIMENSIONALITY,
       },
     };
 
@@ -255,6 +272,6 @@ export class ElectionVertexService {
     }
 
     const faq = ELECTION_FAQ_CORPUS[match.index];
-    return { question: faq.question, answer: faq.answer, score: 0.6 };
+    return { question: faq.question, answer: faq.answer, score: KEYWORD_FALLBACK_SCORE };
   }
 }
