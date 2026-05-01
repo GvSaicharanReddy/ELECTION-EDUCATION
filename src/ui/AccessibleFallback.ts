@@ -15,7 +15,7 @@ import { getAllTimelineEvents } from '../data/timeline';
 import { store } from '../state/store';
 import { announce, setActiveNavSection } from '../utils/a11y';
 import { escapeHtml } from '../utils/sanitize';
-import { JourneyStageId } from '../types/index';
+import { JourneyStageId, TimelineEvent } from '../types/index';
 
 /**
  * Build and manage the accessible fallback layer.
@@ -248,7 +248,7 @@ export class AccessibleFallback {
   /**
    * Render a single timeline event.
    */
-  private renderTimelineEvent(event: any): string {
+  private renderTimelineEvent(event: TimelineEvent): string {
     const borderColor = this.getEventBorderColor(String(event.priority));
     const bg = event.isDeadline ? 'var(--error)' : 'var(--bg-elevated)';
     const color = event.isDeadline ? 'white' : 'var(--text-secondary)';
