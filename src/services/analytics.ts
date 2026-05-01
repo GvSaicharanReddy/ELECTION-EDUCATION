@@ -207,13 +207,17 @@ export class ElectionAnalyticsService {
    * @returns Natural Language API result with entities and sentiment.
    */
   private async analyseWithNaturalLanguage(text: string): Promise<NLApiResponse> {
-    const endpoint = `/documents:analyzeEntities?key=${this.apiKey}`;
+    const endpoint = `/documents:annotateText?key=${this.apiKey}`;
 
     const body = {
       document: {
         type: 'PLAIN_TEXT',
         content: text,
         language: 'en',
+      },
+      features: {
+        extractEntities: true,
+        extractDocumentSentiment: true,
       },
       encodingType: 'UTF8',
     };

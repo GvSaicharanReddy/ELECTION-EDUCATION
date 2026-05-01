@@ -163,16 +163,16 @@ export function generateA11yId(prefix: string): string {
  *
  * Updates ARIA current attributes on nav links.
  *
- * @param sectionId - The currently active section ID.
+ * @param navLinkId - The currently active nav link ID.
  */
-export function setActiveNavSection(sectionId: string): void {
+export function setActiveNavSection(navLinkId: string): void {
   const navLinks = document.querySelectorAll<HTMLElement>('.nav-link');
   navLinks.forEach((link) => {
-    const href = link.getAttribute('href');
-    const isActive = href === `#${sectionId}`;
-    if (isActive) {
-      link.setAttribute('aria-current', 'true');
+    if (link.id === navLinkId) {
+      link.classList.add('active');
+      link.setAttribute('aria-current', 'page');
     } else {
+      link.classList.remove('active');
       link.removeAttribute('aria-current');
     }
   });

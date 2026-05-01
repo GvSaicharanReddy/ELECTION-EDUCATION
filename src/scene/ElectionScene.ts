@@ -97,6 +97,8 @@ const CANVAS_HEIGHT = 128;
 const CANVAS_FONT_SIZE = 36;
 /** Hex string padding length. */
 const HEX_PAD_LENGTH = 6;
+/** Hexadecimal string conversion radix. */
+const HEX_RADIX = 16;
 
 /** Path line colour. */
 const PATH_COLOUR = 0x333366;
@@ -109,6 +111,8 @@ const PATH_POINTS = 100;
 const PARTICLE_COUNT = 500;
 /** Vertex stride in positions array. */
 const VERTEX_STRIDE = 3;
+/** Offset for Z coordinate in vertex array. */
+const Z_COMPONENT_OFFSET = 2;
 /** Particle X spread. */
 const PARTICLE_SPREAD_X = 30;
 /** Particle Y spread. */
@@ -345,7 +349,7 @@ export class ElectionScene {
     ctx.textBaseline = 'middle';
 
     // Convert hex to CSS
-    const hex = `#${colour.toString(GLOW_SEGMENTS).padStart(HEX_PAD_LENGTH, '0')}`;
+    const hex = `#${colour.toString(HEX_RADIX).padStart(HEX_PAD_LENGTH, '0')}`;
     ctx.fillStyle = hex;
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
@@ -393,7 +397,7 @@ export class ElectionScene {
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       positions[i * VERTEX_STRIDE] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_X;
       positions[i * VERTEX_STRIDE + 1] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Y;
-      positions[i * VERTEX_STRIDE + CURVE_DEPTH_Z] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Z;
+      positions[i * VERTEX_STRIDE + Z_COMPONENT_OFFSET] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Z;
     }
 
     const geometry = new THREE.BufferGeometry();

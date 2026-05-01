@@ -90,6 +90,7 @@ function init3DScene(appContainer: HTMLElement): void {
   if (shouldEnable3D) {
     try {
       scene = new ElectionScene(appContainer);
+      appContainer.style.display = 'block';
       store.setState({ is3DEnabled: true });
     } catch (err) {
       logger.warn(LOG_CTX, '3D scene failed to initialise', err);

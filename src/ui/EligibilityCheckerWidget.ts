@@ -7,10 +7,10 @@
  */
 
 import { validateVoterAge } from '../utils/validate';
+import { announce } from '../utils/a11y';
 
 /** Minimum age required to vote. */
 const VOTING_AGE_THRESHOLD = 18;
-import { announce } from '../utils/a11y';
 
 /**
  * Widget that allows voters to interactively check their voting eligibility
