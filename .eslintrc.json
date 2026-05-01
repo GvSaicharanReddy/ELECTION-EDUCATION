@@ -32,7 +32,7 @@
     "eqeqeq": ["error", "always"],
     "curly": ["error", "all"],
     "no-console": "error",
-    "complexity": ["error", 10],
+    "complexity": ["error", 5],
     "max-depth": ["error", 4],
     "max-lines-per-function": ["error", { "max": 50, "skipComments": true, "skipBlankLines": true }],
     "no-magic-numbers": ["warn", { "ignore": [0, 1, -1, 2], "ignoreArrayIndexes": true, "enforceConst": true }]
