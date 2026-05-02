@@ -97,11 +97,12 @@ function isRelativeUrl(url: string): boolean {
   return /^[.#]/.test(url) || (url.startsWith('/') && !url.startsWith('//'));
 }
 
+const ALLOWED_URL_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+
 function parseAndValidateUrl(url: string): string {
   try {
     const parsed = new URL(url);
-    const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:'];
-    return ALLOWED_PROTOCOLS.includes(parsed.protocol) ? url : '';
+    return ALLOWED_URL_PROTOCOLS.has(parsed.protocol) ? url : '';
   } catch {
     return '';
   }

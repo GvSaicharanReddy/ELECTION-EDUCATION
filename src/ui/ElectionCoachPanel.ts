@@ -8,7 +8,7 @@
  */
 
 import { ElectionCoachService } from '../services/gemini';
-import { sanitizeFull } from '../utils/sanitize';
+import { sanitizeFull, stripHtmlTags } from '../utils/sanitize';
 import { validateCoachQuery } from '../utils/validate';
 import { announce } from '../utils/a11y';
 
@@ -129,7 +129,8 @@ export class ElectionCoachPanel {
       return;
     }
 
-    const sanitised = validation.sanitizedValue || sanitizeFull(query);
+    const displayText = stripHtmlTags(query).trim();
+    const apiText = validation.sanitizedValue ?? sanitizeFull(query);
 
     const messages = document.getElementById('coach-messages');
     if (!messages) {
@@ -137,14 +138,14 @@ export class ElectionCoachPanel {
     }
 
     // Show user message
-    this.appendMessage('user', sanitised);
+    this.appendMessage('user', displayText);
 
     // Show loading state
     this.setMessagesBusy(true);
     const loadingId = this.appendMessage('assistant', '🤔 Thinking about your question...');
 
     // Get response
-    const response = await this.coach.chat(sanitised);
+    const response = await this.coach.chat(apiText);
 
     // Replace loading with actual response
     this.replaceMessage(loadingId, response.content);

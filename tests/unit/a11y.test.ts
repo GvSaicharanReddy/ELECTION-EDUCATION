@@ -106,6 +106,45 @@ describe('trapFocus', () => {
     expect(typeof cleanup).toBe('function');
     cleanup();
   });
+
+  it('handleKeyDown ignores non-Tab keys', () => {
+    trapFocus('trap-container');
+    const container = document.getElementById('trap-container')!;
+    const spy = vi.spyOn(Event.prototype, 'preventDefault');
+    container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('handleKeyDown skips action when no focusable elements', () => {
+    document.body.innerHTML = '<div id="empty-trap"></div>';
+    trapFocus('empty-trap');
+    const container = document.getElementById('empty-trap')!;
+    expect(() => {
+      container.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    }).not.toThrow();
+    document.body.innerHTML = '';
+  });
+
+  it('handleTabFocusShift wraps forward focus from last to first', () => {
+    document.body.innerHTML = `
+      <div id="focus-trap">
+        <button id="btn-a">A</button>
+        <button id="btn-b">B</button>
+      </div>`;
+    trapFocus('focus-trap');
+    const container = document.getElementById('focus-trap')!;
+    const btnB = document.getElementById('btn-b')!;
+    btnB.focus();
+    
+    const tabEvent = new KeyboardEvent('keydown', {
+      key: 'Tab', bubbles: true, cancelable: true
+    });
+    const preventSpy = vi.spyOn(tabEvent, 'preventDefault');
+    Object.defineProperty(document, 'activeElement', { value: btnB, configurable: true });
+    container.dispatchEvent(tabEvent);
+    expect(preventSpy).toHaveBeenCalled();
+    document.body.innerHTML = '';
+  });
 });
 
 describe('prefersReducedMotion', () => {

@@ -418,15 +418,7 @@ export class ElectionCoachService {
         { role: 'model', parts },
         { role: 'function', parts: functionResponseParts },
       ],
-      tools: [
-        {
-          functionDeclarations: ELECTION_TOOLS.map((tool) => ({
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-          })),
-        },
-      ],
+      tools: this.getToolDeclarations(),
       generationConfig: GEMINI_GENERATION_CONFIG,
     };
   }
@@ -449,17 +441,21 @@ export class ElectionCoachService {
           })),
         { role: 'user', parts: [{ text: query }] },
       ],
-      tools: [
-        {
-          functionDeclarations: ELECTION_TOOLS.map((tool) => ({
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.parameters,
-          })),
-        },
-      ],
+      tools: this.getToolDeclarations(),
       generationConfig: GEMINI_GENERATION_CONFIG,
     };
+  }
+
+  private getToolDeclarations(): object[] {
+    return [
+      {
+        functionDeclarations: ELECTION_TOOLS.map((tool) => ({
+          name: tool.name,
+          description: tool.description,
+          parameters: tool.parameters,
+        })),
+      },
+    ];
   }
 
   /**

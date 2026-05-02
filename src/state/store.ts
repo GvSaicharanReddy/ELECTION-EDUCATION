@@ -9,6 +9,7 @@
 
 import { AppState, StateSubscriber, JourneyStageId, ElectionCategory } from '../types/index';
 import { prefersReducedMotion } from '../utils/a11y';
+import { logger } from '../utils/logger';
 
 /**
  * Initial application state with safe defaults.
@@ -124,7 +125,11 @@ export class ElectionStore {
   private notify(): void {
     const snapshot = this.getState();
     this.subscribers.forEach((subscriber) => {
-      subscriber(snapshot);
+      try {
+        subscriber(snapshot);
+      } catch (err) {
+        logger.warn('Store', 'Subscriber threw during notification', err);
+      }
     });
   }
 }

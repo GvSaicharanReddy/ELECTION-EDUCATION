@@ -394,7 +394,7 @@ export class AccessibleFallback {
    * Determine the next tab index based on key press.
    */
   private getNextTabIndex(key: string, current: number, max: number): number {
-    const actions: Record<string, () => number> = {
+    const actions: Partial<Record<string, () => number>> = {
       ArrowRight: () => (current + 1) % max,
       ArrowDown: () => (current + 1) % max,
       ArrowLeft: () => (current - 1 + max) % max,
@@ -402,7 +402,8 @@ export class AccessibleFallback {
       Home: () => 0,
       End: () => max - 1,
     };
-    return actions[key] ? actions[key]() : -1;
+    const action = actions[key];
+    return action ? action() : -1;
   }
 
   /**

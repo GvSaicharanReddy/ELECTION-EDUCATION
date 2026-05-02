@@ -134,6 +134,26 @@ export class ElectionTranslationService {
     return this.apiKey.length > 0;
   }
 
+  private canTranslate(target: string | null): boolean {
+    if (!this.isConfigured()) {
+      return false;
+    }
+    if (target === null) {
+      return false;
+    }
+    return true;
+  }
+
+  private canTranslateBatch(texts: readonly string[], target: string | null): boolean {
+    if (!this.canTranslate(target)) {
+      return false;
+    }
+    if (texts.length === 0) {
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Translate a single text string into a target Indian language.
    *
@@ -146,7 +166,7 @@ export class ElectionTranslationService {
    */
   async translateText(text: string, targetLanguage: string): Promise<string> {
     const safeTarget = this.validateLanguageCode(targetLanguage);
-    if (!this.isConfigured() || !safeTarget) {
+    if (!this.canTranslate(safeTarget)) {
       return text;
     }
 
@@ -154,7 +174,10 @@ export class ElectionTranslationService {
     const cacheKey = makeCacheKey('translate', `${safeTarget}:${sanitised.slice(0, TRANSLATION_CACHE_KEY_LENGTH)}`);
 
     const cached = this.cache.get(cacheKey);
-    return cached ? cached : await this.fetchTranslation(sanitised, safeTarget, cacheKey, text);
+    if (cached) {
+      return cached;
+    }
+    return await this.fetchTranslation(sanitised, safeTarget as string, cacheKey, text);
   }
 
   private async fetchTranslation(sanitised: string, safeTarget: string, cacheKey: string, fallback: string): Promise<string> {
@@ -163,7 +186,7 @@ export class ElectionTranslationService {
       const response = await this.client.post<TranslationApiResponse>(`?key=${this.apiKey}`, body);
       const translated = this.extractTranslatedText(response);
 
-      if (translated) {
+      if (translated !== null) {
         this.cache.set(cacheKey, translated);
         return translated;
       }
@@ -185,12 +208,12 @@ export class ElectionTranslationService {
    */
   async translateBatch(texts: readonly string[], targetLanguage: string): Promise<string[]> {
     const safeTarget = this.validateLanguageCode(targetLanguage);
-    if (!this.isConfigured() || texts.length === 0 || !safeTarget) {
+    if (!this.canTranslateBatch(texts, safeTarget)) {
       return [...texts];
     }
 
     const sanitised = texts.map((t) => sanitizeFull(t, TRANSLATION_INPUT_MAX_LENGTH));
-    return await this.fetchBatchTranslation(sanitised, safeTarget, [...texts]);
+    return await this.fetchBatchTranslation(sanitised, safeTarget as string, [...texts]);
   }
 
   private async fetchBatchTranslation(sanitised: string[], safeTarget: string, fallback: string[]): Promise<string[]> {

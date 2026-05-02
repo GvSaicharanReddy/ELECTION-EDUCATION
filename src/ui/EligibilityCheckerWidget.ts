@@ -55,7 +55,7 @@ export class EligibilityCheckerWidget {
         <p style="color: var(--text-secondary); margin-bottom: var(--space-4);">
           Enter your age to check your eligibility according to the Election Commission of India.
         </p>
-        <form id="eligibility-form" role="search" aria-label="Check voting eligibility" style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+        <form id="eligibility-form" aria-label="Voter eligibility age checker" style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
           <label for="age-input" class="sr-only">Enter your age</label>
           <input
             type="number"
