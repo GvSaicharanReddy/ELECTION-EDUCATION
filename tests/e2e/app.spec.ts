@@ -28,29 +28,26 @@ test.describe('Election Saathi India - E2E User Journey', () => {
   test('should open the AI Election Coach', async ({ page }) => {
     // Look for the toggle button and click it
     const coachButton = page.locator('#nav-coach');
-    if (await coachButton.isVisible()) {
-      await coachButton.click();
-      
-      // Verify panel opens — actual ID is #coach-panel
-      const panel = page.locator('#coach-panel');
-      await expect(panel).toBeVisible();
-      
-      // Type a test query
-      const input = page.locator('#coach-input');
-      await input.fill('What is NOTA?');
-      await input.press('Enter');
+    await expect(coachButton).toBeVisible();
+    await coachButton.click();
+    
+    // Verify panel opens — actual ID is #coach-panel
+    const panel = page.locator('#coach-panel');
+    await expect(panel).toBeVisible();
+    
+    // Type a test query
+    const input = page.locator('#coach-input');
+    await input.fill('What is NOTA?');
+    await input.press('Enter');
 
-      // Wait for response bubble — actual class is .coach-message.coach-assistant
-      const response = page.locator('.coach-message.coach-assistant').last();
-      await expect(response).toContainText('NOTA', { timeout: 10000 });
-    }
+    // Wait for response bubble — actual class is .coach-message.coach-assistant
+    const response = page.locator('.coach-message.coach-assistant').last();
+    await expect(response).toContainText('NOTA', { timeout: 10000 });
   });
 
   test('should gracefully handle Maps Widget rendering', async ({ page }) => {
     // Verify map container exists
-    const mapsWidget = page.locator('#maps-widget-container, .maps-widget');
-    if (await mapsWidget.count() > 0) {
-      await expect(mapsWidget).toBeAttached();
-    }
+    const mapsWidget = page.locator('#maps-widget');
+    await expect(mapsWidget).toBeAttached();
   });
 });

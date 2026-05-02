@@ -138,6 +138,13 @@ interface GeminiApiResponse {
   error?: { message: string };
 }
 
+interface FunctionResponsePart {
+  functionResponse: {
+    name: string;
+    response: { result: string };
+  };
+}
+
 /* ---- System Prompt ---- */
 
 const ELECTION_COACH_SYSTEM_PROMPT = `You are "Election Saathi", an expert election education assistant for Indian voters.
@@ -404,7 +411,7 @@ export class ElectionCoachService {
     return null;
   }
 
-  private buildFollowUpRequest(query: string, parts: GeminiPart[], functionResponseParts: object[]): object {
+  private buildFollowUpRequest(query: string, parts: GeminiPart[], functionResponseParts: FunctionResponsePart[]): Record<string, unknown> {
     return {
       systemInstruction: { parts: [{ text: ELECTION_COACH_SYSTEM_PROMPT }] },
       contents: [
@@ -429,7 +436,7 @@ export class ElectionCoachService {
    * @param query - Sanitised user query.
    * @returns Request body object.
    */
-  private buildGeminiRequest(query: string): object {
+  private buildGeminiRequest(query: string): Record<string, unknown> {
     return {
       systemInstruction: { parts: [{ text: ELECTION_COACH_SYSTEM_PROMPT }] },
       contents: [
