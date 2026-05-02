@@ -82,6 +82,11 @@ describe('ElectionCalendarService', () => {
       expect(typeof r.isDeadline).toBe('boolean');
     });
   });
+
+  it('getRemindersByCategory returns empty array for non-existent category', () => {
+    const result = service.getRemindersByCategory('nonexistent' as any);
+    expect(result).toHaveLength(0);
+  });
 });
 
 // ---- Translation Service Tests ----

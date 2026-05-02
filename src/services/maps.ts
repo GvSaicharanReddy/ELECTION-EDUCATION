@@ -12,6 +12,7 @@
 import { PollingLocation, ApiResponse } from '../types/index';
 import { sanitizeFull } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
+import { logger } from '../utils/logger';
 
 /** Default map centre — New Delhi (India Gate), latitude. */
 const INDIA_CENTRE_LAT = 28.6139;
@@ -164,7 +165,8 @@ export class ElectionMapsService {
       });
 
       return true;
-    } catch {
+    } catch (err) {
+      logger.warn('ElectionMapsService', 'Map init failed', err);
       return false;
     }
   }

@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ElectionMapsService } from '../../src/services/maps';
 import { ElectionTranslationService } from '../../src/services/translation';
 import { ElectionCoachService } from '../../src/services/gemini';
-import { ElectionVertexService, _resetCorpusCache } from '../../src/services/vertex';
+import { ElectionVertexService } from '../../src/services/vertex';
 import { ElectionAnalyticsService } from '../../src/services/analytics';
 import { SafeApiClient } from '../../src/services/api-client';
 import { sanitizeUrl, escapeHtml } from '../../src/utils/sanitize';
@@ -437,9 +437,6 @@ describe('Coverage Filler Tests', () => {
   // ═══════════════════════════════════════════════════════
 
   describe('ElectionVertexService', () => {
-    beforeEach(() => {
-      _resetCorpusCache();
-    });
 
     it('cosineSimilarity handles length mismatch (line 223)', () => {
       const service = new ElectionVertexService();

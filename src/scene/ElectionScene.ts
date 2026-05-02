@@ -261,8 +261,7 @@ export class ElectionScene {
     this.cleanupFns.push(unsubscribe);
 
     // Start render loop
-    this.animationId = 0;
-    this.animate();
+    this.animationId = requestAnimationFrame(() => this.animate());
   }
 
   /**
@@ -499,13 +498,22 @@ export class ElectionScene {
    * @param container - The DOM container element.
    */
   private setupEventListeners(container: HTMLElement): void {
+    let resizeTimeout: number | undefined;
     const handleResize = (): void => {
-      this.camera.aspect = container.clientWidth / container.clientHeight;
-      this.camera.updateProjectionMatrix();
-      this.renderer.setSize(container.clientWidth, container.clientHeight);
+      if (resizeTimeout !== undefined) {
+        window.clearTimeout(resizeTimeout);
+      }
+      resizeTimeout = window.setTimeout(() => {
+        this.camera.aspect = container.clientWidth / container.clientHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(container.clientWidth, container.clientHeight);
+      }, 100);
     };
-    window.addEventListener('resize', handleResize);
-    this.cleanupFns.push(() => window.removeEventListener('resize', handleResize));
+    window.addEventListener('resize', handleResize, { passive: true });
+    this.cleanupFns.push(() => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeout !== undefined) window.clearTimeout(resizeTimeout);
+    });
 
     // Click/tap on stage nodes
     const handleClick = (event: MouseEvent): void => {
@@ -536,8 +544,7 @@ export class ElectionScene {
     };
     const onContextRestored = (): void => {
       if (this.animationId === DISPOSED_SENTINEL) {
-        this.animationId = 0;
-        this.animate();
+        this.animationId = requestAnimationFrame(() => this.animate());
       }
     };
 
@@ -554,9 +561,8 @@ export class ElectionScene {
    * Clean up the scene and release resources.
    */
   dispose(): void {
-    const id = this.animationId;
+    cancelAnimationFrame(this.animationId);
     this.animationId = DISPOSED_SENTINEL;
-    cancelAnimationFrame(id);
     this.cleanupFns.forEach((fn) => fn());
     this.cleanupFns.length = 0;
     this.textures.forEach((t) => t.dispose());

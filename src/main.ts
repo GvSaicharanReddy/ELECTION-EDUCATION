@@ -106,16 +106,11 @@ function init3DScene(appContainer: HTMLElement): void {
 }
 
 /**
- * Interface for UI widgets that initialise themselves on construction.
- */
-interface InitialisableWidget {}
-
-/**
  * Initialize all standard UI widgets.
  * Each widget is initialised independently so a single failure cannot cascade.
  */
 function initWidgets(): void {
-  const widgets: Array<{ name: string; constructor: new () => InitialisableWidget }> = [
+  const widgets: Array<{ name: string; constructor: new () => object }> = [
     { name: 'CoachPanel', constructor: ElectionCoachPanel },
     { name: 'TranslationWidget', constructor: TranslationWidget },
     { name: 'MapsWidget', constructor: MapsWidget },

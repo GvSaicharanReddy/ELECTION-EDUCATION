@@ -131,6 +131,11 @@ export class ElectionCoachPanel {
 
     const sanitised = validation.sanitizedValue || sanitizeFull(query);
 
+    const messages = document.getElementById('coach-messages');
+    if (!messages) {
+      return;
+    }
+
     // Show user message
     this.appendMessage('user', sanitised);
 

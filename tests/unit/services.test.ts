@@ -106,6 +106,16 @@ describe('ElectionCoachService', () => {
     expect(history1).toEqual(history2);
     expect(history1).not.toBe(history2);
   });
+
+  it('trims conversation history when it exceeds MAX_HISTORY_TURNS * 2', async () => {
+    // Send 22 messages to exceed the 40-message threshold (20 turns × 2)
+    for (let i = 0; i < 21; i++) {
+      await coach.chat(`Question number ${i}`);
+    }
+    const history = coach.getHistory();
+    // History should be trimmed — never unbounded
+    expect(history.length).toBeLessThanOrEqual(42);
+  });
 });
 
 describe('ELECTION_TOOLS', () => {

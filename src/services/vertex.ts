@@ -118,14 +118,6 @@ const KEYWORD_FALLBACK_SCORE = 0.6;
 /** Maximum length for text input to Vertex AI. */
 const VERTEX_INPUT_MAX_LENGTH = 500;
 
-/** Cached corpus embeddings — computed once per session. */
-let _corpusEmbeddingsCache: (number[] | null)[] | null = null;
-
-/** @internal Reset corpus cache — exposed for testing only. */
-export function _resetCorpusCache(): void {
-  _corpusEmbeddingsCache = null;
-}
-
 /* ---- Service ---- */
 
 /**
@@ -138,6 +130,7 @@ export function _resetCorpusCache(): void {
 export class ElectionVertexService {
   private readonly client: SafeApiClient;
   private readonly apiKey: string;
+  private corpusEmbeddingsCache: (number[] | null)[] | null = null;
 
   /**
    * Initialize the Vertex AI Service.
@@ -247,13 +240,13 @@ export class ElectionVertexService {
    * @returns Array of embedding vectors for each FAQ entry.
    */
   private async getCorpusEmbeddings(): Promise<(number[] | null)[]> {
-    if (_corpusEmbeddingsCache) {
-      return _corpusEmbeddingsCache;
+    if (this.corpusEmbeddingsCache) {
+      return this.corpusEmbeddingsCache;
     }
-    _corpusEmbeddingsCache = await Promise.all(
-      ELECTION_FAQ_CORPUS.map((faq) => this.embedText(faq.question)),
-    );
-    return _corpusEmbeddingsCache;
+
+    const promises = ELECTION_FAQ_CORPUS.map((entry) => this.embedText(entry.question));
+    this.corpusEmbeddingsCache = await Promise.all(promises);
+    return this.corpusEmbeddingsCache;
   }
 
   /**

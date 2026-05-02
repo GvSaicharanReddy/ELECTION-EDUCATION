@@ -27,8 +27,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ['three'],
-          gemini: ['@google/generative-ai']
+          three: ['three']
         }
       }
     }
@@ -50,7 +49,7 @@ export default defineConfig({
       'X-Frame-Options': 'DENY',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Content-Security-Policy':
-        "default-src 'self'; script-src 'self' https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com; img-src 'self' data: blob:; frame-src https://www.google.com https://maps.google.com;",
+        "default-src 'self'; script-src 'self' https://maps.googleapis.com; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://*.googleapis.com; img-src 'self' data: blob:; frame-src https://www.google.com https://maps.google.com;",
     },
   },
 });
