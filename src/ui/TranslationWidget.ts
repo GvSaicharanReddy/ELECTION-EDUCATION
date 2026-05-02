@@ -26,7 +26,6 @@ const BATCH_SIZE = 50;
 export class TranslationWidget {
   private readonly service: ElectionTranslationService;
   private currentLang: string = 'en';
-  private nodeCache: HTMLElement[] | null = null;
 
   /**
    * Initialize the Translation widget and render the language selector.
@@ -128,6 +127,7 @@ export class TranslationWidget {
         }
       });
       this.currentLang = 'en';
+      document.documentElement.lang = 'en';
       announce('Restored to English.');
       return;
     }
@@ -148,6 +148,7 @@ export class TranslationWidget {
     }
 
     this.currentLang = targetLang;
+    document.documentElement.lang = targetLang;
     announce('Translation complete.');
   }
 
@@ -157,10 +158,7 @@ export class TranslationWidget {
    * @returns Array of HTMLElements with translatable text.
    */
   private getTranslatableNodes(): HTMLElement[] {
-    if (!this.nodeCache) {
-      this.nodeCache = this.collectTranslatableNodes();
-    }
-    return this.nodeCache;
+    return this.collectTranslatableNodes();
   }
 
   /**

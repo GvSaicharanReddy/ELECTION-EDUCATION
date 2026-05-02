@@ -26,6 +26,7 @@ import { ElectionVertexService } from './services/vertex';
 import { store } from './state/store';
 import { announce, onReducedMotionChange, prefersReducedMotion } from './utils/a11y';
 import { logger } from './utils/logger';
+import type { SectionId } from './types/index';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -54,7 +55,7 @@ let scene: ElectionScene | null = null;
  *
  * @throws {Error} If the `#app` root element is missing from the DOM.
  */
-async function bootstrap(): Promise<void> {
+function bootstrap(): void {
   const appContainer = document.getElementById('app');
   if (!appContainer) {
     throw new Error('Bootstrap: #app root element not found in DOM.');
@@ -62,7 +63,7 @@ async function bootstrap(): Promise<void> {
 
   initAccessibleFallback();
   init3DScene(appContainer);
-  await initWidgets();
+  initWidgets();
   initCloudServices();
   initListeners();
 }
@@ -113,7 +114,7 @@ interface InitialisableWidget {}
  * Initialize all standard UI widgets.
  * Each widget is initialised independently so a single failure cannot cascade.
  */
-async function initWidgets(): Promise<void> {
+function initWidgets(): void {
   const widgets: Array<{ name: string; constructor: new () => InitialisableWidget }> = [
     { name: 'CoachPanel', constructor: ElectionCoachPanel },
     { name: 'TranslationWidget', constructor: TranslationWidget },
@@ -219,7 +220,7 @@ function setupScrollSpy(): void {
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          store.setState({ activeSection: entry.target.id });
+          store.setState({ activeSection: entry.target.id as SectionId });
         }
       });
     },
@@ -230,6 +231,12 @@ function setupScrollSpy(): void {
 }
 
 // Bootstrap on DOM ready
-document.addEventListener('DOMContentLoaded', bootstrap);
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    bootstrap();
+  } catch (err: unknown) {
+    logger.error('Bootstrap', 'Fatal initialisation error', err);
+  }
+});
 
 export { bootstrap };

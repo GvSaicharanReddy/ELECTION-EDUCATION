@@ -197,6 +197,9 @@ export interface PollingLocation {
    APPLICATION STATE
    ============================================================ */
 
+/** Navigable application sections. */
+export type SectionId = 'election-journey' | 'election-types' | 'timeline' | 'faq' | 'coach-panel' | 'maps-widget' | 'calendar-widget';
+
 /** Current stage the user is viewing in the journey. */
 export interface AppState {
   currentStage: JourneyStageId;
@@ -207,7 +210,7 @@ export interface AppState {
   isMapsLoaded: boolean;
   isReducedMotion: boolean;
   is3DEnabled: boolean;
-  activeSection: string;
+  activeSection: SectionId;
 }
 
 /** Callback type for state change subscribers. */

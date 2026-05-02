@@ -465,7 +465,9 @@ export class ElectionScene {
    * Main animation loop.
    */
   private animate(): void {
-    if (this.animationId === DISPOSED_SENTINEL) return;
+    if (this.animationId === DISPOSED_SENTINEL) {
+      return;
+    }
     this.animationId = requestAnimationFrame(() => this.animate());
 
     // Smooth camera interpolation
@@ -522,6 +524,30 @@ export class ElectionScene {
     };
     container.addEventListener('click', handleClick);
     this.cleanupFns.push(() => container.removeEventListener('click', handleClick));
+
+    // WebGL Context Loss Handling
+    const canvas = this.renderer.domElement;
+    const onContextLost = (e: Event): void => {
+      e.preventDefault();
+      if (this.animationId !== DISPOSED_SENTINEL) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = DISPOSED_SENTINEL;
+      }
+    };
+    const onContextRestored = (): void => {
+      if (this.animationId === DISPOSED_SENTINEL) {
+        this.animationId = 0;
+        this.animate();
+      }
+    };
+
+    canvas.addEventListener('webglcontextlost', onContextLost, false);
+    canvas.addEventListener('webglcontextrestored', onContextRestored, false);
+
+    this.cleanupFns.push(() => {
+      canvas.removeEventListener('webglcontextlost', onContextLost);
+      canvas.removeEventListener('webglcontextrestored', onContextRestored);
+    });
   }
 
   /**

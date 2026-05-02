@@ -86,14 +86,22 @@ export function sanitizeUrl(url: string): string {
   }
   const trimmed = url.trim();
   
-  if (/^[.#]/.test(trimmed) || (trimmed.startsWith('/') && !trimmed.startsWith('//'))) {
+  if (isRelativeUrl(trimmed)) {
     return trimmed;
   }
 
+  return parseAndValidateUrl(trimmed);
+}
+
+function isRelativeUrl(url: string): boolean {
+  return /^[.#]/.test(url) || (url.startsWith('/') && !url.startsWith('//'));
+}
+
+function parseAndValidateUrl(url: string): string {
   try {
-    const parsed = new URL(trimmed);
+    const parsed = new URL(url);
     const ALLOWED_PROTOCOLS = ['http:', 'https:', 'mailto:'];
-    return ALLOWED_PROTOCOLS.includes(parsed.protocol) ? trimmed : '';
+    return ALLOWED_PROTOCOLS.includes(parsed.protocol) ? url : '';
   } catch {
     return '';
   }

@@ -14,7 +14,7 @@ import { ELECTION_FAQ } from '../data/faq';
 import { getAllTimelineEvents } from '../data/timeline';
 import { store } from '../state/store';
 import { announce, setActiveNavSection } from '../utils/a11y';
-import { escapeHtml } from '../utils/sanitize';
+import { escapeHtml, sanitizeUrl } from '../utils/sanitize';
 import { JourneyStageId, TimelineEvent } from '../types/index';
 
 /**
@@ -39,11 +39,11 @@ export class AccessibleFallback {
     }
     this.container = el;
     this.render();
-    this.subscribeToState();
     this.renderJourneyStages();
     this.renderElectionTypes();
     this.renderTimeline();
     this.renderFaq();
+    this.subscribeToState();
   }
 
   /**
@@ -161,7 +161,7 @@ export class AccessibleFallback {
               <p style="color: var(--text-secondary); margin-top: var(--space-1);">${escapeHtml(step.description)}</p>
               ${
                 step.actionLabel && step.actionUrl
-                  ? `<a href="${escapeHtml(step.actionUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="margin-top: var(--space-2); display: inline-block;">${escapeHtml(step.actionLabel)} ↗</a>`
+                  ? `<a href="${escapeHtml(sanitizeUrl(step.actionUrl ?? ''))}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="margin-top: var(--space-2); display: inline-block;">${escapeHtml(step.actionLabel)} ↗</a>`
                   : ''
               }
             </li>
@@ -206,32 +206,11 @@ export class AccessibleFallback {
   private setupVisibleTabKeyboard(container: HTMLElement): void {
     container.addEventListener('keydown', (event) => {
       const target = event.target as HTMLElement;
-      if (target.getAttribute('role') !== 'tab') return;
-
+      if (target.getAttribute('role') !== 'tab') {
+        return;
+      }
       const tabs = Array.from(container.querySelectorAll<HTMLElement>('[role="tab"]'));
-      const currentIndex = tabs.indexOf(target);
-      let nextIndex = -1;
-
-      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
-        nextIndex = (currentIndex + 1) % tabs.length;
-      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
-        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-      } else if (event.key === 'Home') {
-        nextIndex = 0;
-      } else if (event.key === 'End') {
-        nextIndex = tabs.length - 1;
-      }
-
-      if (nextIndex !== -1 && nextIndex !== currentIndex) {
-        event.preventDefault();
-        tabs[nextIndex].focus();
-        const stageId = tabs[nextIndex].getAttribute('data-stage-id') as JourneyStageId;
-        if (stageId) store.goToStage(stageId);
-      } else if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        const stageId = target.getAttribute('data-stage-id') as JourneyStageId;
-        if (stageId) store.goToStage(stageId);
-      }
+      this.handleTabKeydown(event, target, tabs);
     });
   }
 

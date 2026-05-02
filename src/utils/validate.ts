@@ -112,19 +112,18 @@ export function validateStageId(stageId: unknown): ValidationResult {
  * @returns Validation result with eligibility message.
  */
 export function validateVoterAge(age: unknown): ValidationResult {
-  if (typeof age !== 'number') {
-    return { isValid: false, errors: ['Age must be a valid number.'] };
-  }
-  if (Number.isNaN(age)) {
+  const numericAge = typeof age === 'string' ? Number(age) : age;
+
+  if (typeof numericAge !== 'number' || Number.isNaN(numericAge)) {
     return { isValid: false, errors: ['Age must be a valid number.'] };
   }
 
-  const numericErrors = getNumericAgeErrors(age);
+  const numericErrors = getNumericAgeErrors(numericAge);
   if (numericErrors.length > 0) {
     return { isValid: false, errors: numericErrors };
   }
 
-  return buildAgeResult(age);
+  return buildAgeResult(numericAge);
 }
 
 function buildAgeResult(age: number): ValidationResult {

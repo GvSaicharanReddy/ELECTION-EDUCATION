@@ -282,7 +282,7 @@ export class ElectionCoachService {
   constructor() {
     this.apiKey = String(
       import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_KEY || '',
-    );
+    ).trim();
     this.model = String(import.meta.env.VITE_GEMINI_MODEL || 'gemini-1.5-flash');
     this.client = new SafeApiClient({
       baseUrl: 'https://generativelanguage.googleapis.com',
@@ -326,7 +326,7 @@ export class ElectionCoachService {
     }
 
     // Trim conversation history to prevent unbounded growth
-    if (this.conversationHistory.length > MAX_HISTORY_TURNS * 2) {
+    if (this.conversationHistory.length >= MAX_HISTORY_TURNS * 2) {
       this.conversationHistory =
         this.conversationHistory.slice(-MAX_HISTORY_TURNS * 2);
     }
@@ -374,56 +374,61 @@ export class ElectionCoachService {
         !!p.functionCall,
     );
 
-    // If Gemini returned tool calls, execute them and send results back
     if (toolParts.length > 0) {
-      const toolResults = toolParts.map((p) => this.processToolCall(p.functionCall));
-      const functionResponseParts = toolResults.map((r) => ({
-        functionResponse: {
-          name: r.toolName,
-          response: { result: r.status === 'success' ? String(r.result) : 'Service unavailable' },
-        },
-      }));
-
-      // Build follow-up request with function role turn
-      const followUpBody = {
-        systemInstruction: { parts: [{ text: ELECTION_COACH_SYSTEM_PROMPT }] },
-        contents: [
-          ...this.conversationHistory
-            .filter((m) => m.role !== 'system')
-            .map((m) => ({
-              role: m.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: m.content }],
-            })),
-          { role: 'user', parts: [{ text: query }] },
-          { role: 'model', parts },
-          { role: 'function', parts: functionResponseParts },
-        ],
-        tools: [
-          {
-            functionDeclarations: ELECTION_TOOLS.map((tool) => ({
-              name: tool.name,
-              description: tool.description,
-              parameters: tool.parameters,
-            })),
-          },
-        ],
-        generationConfig: GEMINI_GENERATION_CONFIG,
-      };
-
-      const followUp = await this.client.post<GeminiApiResponse>(endpoint, followUpBody);
-      if (followUp.ok && followUp.data?.candidates?.[0]) {
-        const followUpText = followUp.data.candidates[0].content.parts
-          .filter((p): p is GeminiPart & { text: string } => !!p.text)
-          .map((p) => p.text)
-          .join('\n');
-        return followUpText || null;
-      }
-
-      // Follow-up failed — cannot produce a meaningful response
-      return null;
+      return this.handleToolCalls(query, parts, toolParts, endpoint);
     }
 
     return this.processGeminiResponse(parts);
+  }
+
+  private async handleToolCalls(query: string, parts: GeminiPart[], toolParts: (GeminiPart & { functionCall: { name: string; args: Record<string, unknown> } })[], endpoint: string): Promise<string | null> {
+    const toolResults = toolParts.map((p) => this.processToolCall(p.functionCall));
+    const functionResponseParts = toolResults.map((r) => ({
+      functionResponse: {
+        name: r.toolName,
+        response: { result: r.status === 'success' ? String(r.result) : 'Service unavailable' },
+      },
+    }));
+
+    const followUpBody = this.buildFollowUpRequest(query, parts, functionResponseParts);
+    const followUp = await this.client.post<GeminiApiResponse>(endpoint, followUpBody);
+    
+    if (followUp.ok && followUp.data?.candidates?.[0]) {
+      const followUpText = followUp.data.candidates[0].content.parts
+        .filter((p): p is GeminiPart & { text: string } => !!p.text)
+        .map((p) => p.text)
+        .join('\n');
+      return followUpText || null;
+    }
+
+    return null;
+  }
+
+  private buildFollowUpRequest(query: string, parts: GeminiPart[], functionResponseParts: object[]): object {
+    return {
+      systemInstruction: { parts: [{ text: ELECTION_COACH_SYSTEM_PROMPT }] },
+      contents: [
+        ...this.conversationHistory
+          .filter((m) => m.role !== 'system')
+          .map((m) => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }],
+          })),
+        { role: 'user', parts: [{ text: query }] },
+        { role: 'model', parts },
+        { role: 'function', parts: functionResponseParts },
+      ],
+      tools: [
+        {
+          functionDeclarations: ELECTION_TOOLS.map((tool) => ({
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.parameters,
+          })),
+        },
+      ],
+      generationConfig: GEMINI_GENERATION_CONFIG,
+    };
   }
 
   /**
@@ -465,24 +470,7 @@ export class ElectionCoachService {
    */
   private processGeminiResponse(parts: GeminiPart[]): string | null {
     const textParts = parts.filter((p): p is GeminiPart & { text: string } => !!p.text);
-    const toolParts = parts.filter(
-      (p): p is GeminiPart & { functionCall: { name: string; args: Record<string, unknown> } } =>
-        !!p.functionCall,
-    );
-
-    let responseText = textParts.map((p) => p.text).join('\n');
-
-    if (toolParts.length > 0) {
-      const toolResults = toolParts.map((p) => this.processToolCall(p.functionCall));
-      const toolSummary = toolResults
-        .map(
-          (r) =>
-            `[${r.toolName}]: ${r.status === 'success' ? String(r.result) : 'Service unavailable'}`,
-        )
-        .join('\n');
-      responseText += `\n\n${toolSummary}`;
-    }
-
+    const responseText = textParts.map((p) => p.text).join('\n');
     return responseText || null;
   }
 

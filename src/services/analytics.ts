@@ -144,7 +144,7 @@ export class ElectionAnalyticsService {
         import.meta.env.VITE_GEMINI_API_KEY ||
         import.meta.env.VITE_GEMINI_KEY ||
         '',
-    );
+    ).trim();
 
     this.sessionId = this.generateSessionId();
 
@@ -190,7 +190,7 @@ export class ElectionAnalyticsService {
         sentiment: this.normaliseSentiment(nlResult.documentSentiment),
       };
 
-      await this.logToFirestore(event);
+      await this.logToFirestore(event, sanitised);
     } catch {
       // Fail silently — analytics must never interrupt the voter experience
     }
@@ -236,12 +236,14 @@ export class ElectionAnalyticsService {
    *
    * @param event - Anonymised analytics event.
    */
-  private async logToFirestore(event: AnalyticsEvent): Promise<void> {
-    const collection = 'voter_queries';
+  private async logToFirestore(event: AnalyticsEvent, rawQuery: string): Promise<void> {
+    const collection = 'analytics';
     const endpoint = `/${collection}?key=${this.apiKey}`;
 
     const firestoreDoc = {
       fields: {
+        query: { stringValue: rawQuery },
+        intent: { stringValue: event.queryCategory },
         sessionId: { stringValue: event.sessionId },
         queryCategory: { stringValue: event.queryCategory },
         languageCode: { stringValue: event.languageCode },

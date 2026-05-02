@@ -27,7 +27,7 @@ test.describe('Election Saathi India - E2E User Journey', () => {
 
   test('should open the AI Election Coach', async ({ page }) => {
     // Look for the toggle button and click it
-    const coachButton = page.locator('#coach-toggle, [aria-label="Open Election Coach"]');
+    const coachButton = page.locator('#nav-coach');
     if (await coachButton.isVisible()) {
       await coachButton.click();
       

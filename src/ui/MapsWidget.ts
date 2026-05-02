@@ -8,7 +8,7 @@
  */
 
 import { ElectionMapsService } from '../services/maps';
-import { escapeHtml, sanitizeFull } from '../utils/sanitize';
+import { escapeHtml, sanitizeFull, sanitizeUrl } from '../utils/sanitize';
 import { announce } from '../utils/a11y';
 
 /** Maximum input length for map search queries. */
@@ -94,6 +94,8 @@ export class MapsWidget {
             placeholder="Enter area, city, or PIN code…"
             autocomplete="off"
             maxlength="200"
+            aria-invalid="false"
+            aria-describedby="maps-results"
             style="flex: 1; padding: var(--space-3); background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-primary); font-family: var(--font-sans);"
           />
           <button type="submit" class="btn btn-primary" id="maps-search-btn" aria-label="Search for polling locations">
@@ -239,7 +241,7 @@ export class MapsWidget {
       const embedUrl = this.maps.generateMapsEmbedUrl(query);
       embedContainer.innerHTML = `
         <iframe
-          src="${escapeHtml(embedUrl)}"
+          src="${sanitizeUrl(embedUrl)}"
           width="100%"
           height="300"
           style="border: 0; border-radius: var(--radius-md);"

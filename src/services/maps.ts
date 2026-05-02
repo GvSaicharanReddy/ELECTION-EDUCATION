@@ -58,6 +58,7 @@ export class ElectionMapsService {
   private readonly cache: ElectionCache<PollingLocation[]>;
   private mapInstance: google.maps.Map | null;
   private isLoaded: boolean;
+  private mapsPromise: Promise<boolean> | null = null;
 
   /**
    * Initialize the Google Maps Service.
@@ -97,7 +98,11 @@ export class ElectionMapsService {
       return false;
     }
 
-    return new Promise((resolve) => {
+    if (this.mapsPromise) {
+      return this.mapsPromise;
+    }
+
+    this.mapsPromise = new Promise((resolve) => {
       // Check if already loaded by another script
       if (typeof google !== 'undefined' && google.maps) {
         this.isLoaded = true;
@@ -123,11 +128,13 @@ export class ElectionMapsService {
       };
 
       script.onerror = (): void => {
+        this.mapsPromise = null;
         resolve(false);
       };
 
       document.head.appendChild(script);
     });
+    return this.mapsPromise;
   }
 
   /**
@@ -138,16 +145,19 @@ export class ElectionMapsService {
    * @param zoom - Optional zoom level.
    * @returns True if the map was initialised.
    */
-  initMap(containerId: string, centre?: { lat: number; lng: number }, zoom?: number): boolean {
+  initMap(containerId: string, centre: { lat: number; lng: number } = INDIA_CENTRE, zoom: number = DEFAULT_ZOOM): boolean {
     const container = document.getElementById(containerId);
-    if (!container || !this.isLoaded) {
+    if (!container) {
+      return false;
+    }
+    if (!this.isLoaded) {
       return false;
     }
 
     try {
       this.mapInstance = new google.maps.Map(container, {
-        center: centre || INDIA_CENTRE,
-        zoom: zoom || DEFAULT_ZOOM,
+        center: centre,
+        zoom: zoom,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: true,
