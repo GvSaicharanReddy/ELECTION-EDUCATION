@@ -32,6 +32,8 @@ const CAMERA_DEFAULT_Y = 2;
 const CAMERA_DEFAULT_Z = 12;
 /** Maximum device-pixel-ratio clamp. */
 const MAX_PIXEL_RATIO = 2;
+/** Debounce timeout for window resize events. */
+const RESIZE_DEBOUNCE_MS = 100;
 
 /** Ambient light colour. */
 const AMBIENT_COLOUR = 0x404060;
@@ -498,6 +500,12 @@ export class ElectionScene {
    * @param container - The DOM container element.
    */
   private setupEventListeners(container: HTMLElement): void {
+    this.setupResizeListener(container);
+    this.setupClickListener(container);
+    this.setupContextLossListener();
+  }
+
+  private setupResizeListener(container: HTMLElement): void {
     let resizeTimeout: number | undefined;
     const handleResize = (): void => {
       if (resizeTimeout !== undefined) {
@@ -507,15 +515,18 @@ export class ElectionScene {
         this.camera.aspect = container.clientWidth / container.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(container.clientWidth, container.clientHeight);
-      }, 100);
+      }, RESIZE_DEBOUNCE_MS);
     };
     window.addEventListener('resize', handleResize, { passive: true });
     this.cleanupFns.push(() => {
       window.removeEventListener('resize', handleResize);
-      if (resizeTimeout !== undefined) window.clearTimeout(resizeTimeout);
+      if (resizeTimeout !== undefined) {
+        window.clearTimeout(resizeTimeout);
+      }
     });
+  }
 
-    // Click/tap on stage nodes
+  private setupClickListener(container: HTMLElement): void {
     const handleClick = (event: MouseEvent): void => {
       const rect = container.getBoundingClientRect();
       this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -532,8 +543,9 @@ export class ElectionScene {
     };
     container.addEventListener('click', handleClick);
     this.cleanupFns.push(() => container.removeEventListener('click', handleClick));
+  }
 
-    // WebGL Context Loss Handling
+  private setupContextLossListener(): void {
     const canvas = this.renderer.domElement;
     const onContextLost = (e: Event): void => {
       e.preventDefault();
@@ -557,16 +569,40 @@ export class ElectionScene {
     });
   }
 
+  private disposeMaterial(material: THREE.Material | THREE.Material[]): void {
+    if (Array.isArray(material)) {
+      material.forEach((m) => m.dispose());
+    } else {
+      material.dispose();
+    }
+  }
+
   /**
    * Clean up the scene and release resources.
    */
   dispose(): void {
     cancelAnimationFrame(this.animationId);
     this.animationId = DISPOSED_SENTINEL;
+    
     this.cleanupFns.forEach((fn) => fn());
     this.cleanupFns.length = 0;
+    
     this.textures.forEach((t) => t.dispose());
     this.textures.length = 0;
+    
+    // Explicitly dispose of GPU memory (geometries & materials) to prevent severe SPA leaks
+    this.scene.traverse((object: THREE.Object3D) => {
+      if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
+        const mesh = object as THREE.Mesh | THREE.Points;
+        if (mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+        if (mesh.material) {
+          this.disposeMaterial(mesh.material);
+        }
+      }
+    });
+    
     this.renderer.dispose();
     this.scene.clear();
   }
