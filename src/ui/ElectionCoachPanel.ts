@@ -62,7 +62,7 @@ export class ElectionCoachPanel {
           <button class="btn btn-secondary coach-suggestion" data-query="How do panchayat elections work?" aria-label="Ask: How do panchayat elections work?">Panchayat</button>
         </div>
 
-        <form id="coach-form" role="search" aria-label="Ask the Election Coach a question">
+        <form id="coach-form" aria-label="Ask the Election Coach a question">
           <div style="display: flex; gap: var(--space-2);">
             <label for="coach-input" class="sr-only">Type your election question</label>
             <input

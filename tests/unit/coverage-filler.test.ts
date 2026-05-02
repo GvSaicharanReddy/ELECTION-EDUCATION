@@ -16,7 +16,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ElectionMapsService } from '../../src/services/maps';
 import { ElectionTranslationService } from '../../src/services/translation';
 import { ElectionCoachService } from '../../src/services/gemini';
-import { ElectionVertexService } from '../../src/services/vertex';
+import { ElectionVertexService, _resetCorpusCache } from '../../src/services/vertex';
 import { ElectionAnalyticsService } from '../../src/services/analytics';
 import { SafeApiClient } from '../../src/services/api-client';
 import { sanitizeUrl, escapeHtml } from '../../src/utils/sanitize';
@@ -305,6 +305,42 @@ describe('Coverage Filler Tests', () => {
       expect(service.normaliseSentiment(undefined)).toBe('neutral');
     });
 
+    it('normaliseSentiment returns neutral at exact positive threshold 0.15', () => {
+      const service = new ElectionAnalyticsService();
+      // @ts-ignore — score of 0.15 is NOT > 0.15, so it stays neutral
+      expect(service.normaliseSentiment({ score: 0.15, magnitude: 1.0 })).toBe('neutral');
+    });
+
+    it('normaliseSentiment returns positive just above threshold 0.16', () => {
+      const service = new ElectionAnalyticsService();
+      // @ts-ignore
+      expect(service.normaliseSentiment({ score: 0.16, magnitude: 1.0 })).toBe('positive');
+    });
+
+    it('normaliseSentiment returns neutral at exact negative threshold -0.15', () => {
+      const service = new ElectionAnalyticsService();
+      // @ts-ignore — score of -0.15 is NOT < -0.15, so it stays neutral
+      expect(service.normaliseSentiment({ score: -0.15, magnitude: 1.0 })).toBe('neutral');
+    });
+
+    it('normaliseSentiment returns negative just below threshold -0.16', () => {
+      const service = new ElectionAnalyticsService();
+      // @ts-ignore
+      expect(service.normaliseSentiment({ score: -0.16, magnitude: 1.0 })).toBe('negative');
+    });
+
+    it('normaliseSentiment returns neutral at 0.14 (just below positive threshold)', () => {
+      const service = new ElectionAnalyticsService();
+      // @ts-ignore
+      expect(service.normaliseSentiment({ score: 0.14, magnitude: 1.0 })).toBe('neutral');
+    });
+
+    it('normaliseSentiment returns neutral at -0.14 (just above negative threshold)', () => {
+      const service = new ElectionAnalyticsService();
+      // @ts-ignore
+      expect(service.normaliseSentiment({ score: -0.14, magnitude: 1.0 })).toBe('neutral');
+    });
+
     it('generateSessionId falls back when crypto.randomUUID is unavailable (line 283)', () => {
       const origRandom = crypto.randomUUID;
       // @ts-ignore
@@ -401,6 +437,10 @@ describe('Coverage Filler Tests', () => {
   // ═══════════════════════════════════════════════════════
 
   describe('ElectionVertexService', () => {
+    beforeEach(() => {
+      _resetCorpusCache();
+    });
+
     it('cosineSimilarity handles length mismatch (line 223)', () => {
       const service = new ElectionVertexService();
       // @ts-ignore
@@ -433,7 +473,8 @@ describe('Coverage Filler Tests', () => {
       const service = new ElectionVertexService();
       // @ts-ignore
       service.apiKey = 'test-key';
-      // Mock client.post to return a valid embedding vector
+      // Mock client.post to return the same embedding vector for query and all corpus entries.
+      // Cosine similarity between identical vectors is 1.0, which exceeds the 0.5 threshold.
       // @ts-ignore
       vi.spyOn(service.client, 'post').mockResolvedValue({
         ok: true,
@@ -441,10 +482,6 @@ describe('Coverage Filler Tests', () => {
           predictions: [{ embeddings: { values: [0.5, 0.8, 0.3] } }],
         },
       } as any);
-      // We also mock the static CORPUS embeddings to be the same vector
-      // so the cosine similarity is 1.0 (which is > 0.5)
-      // @ts-ignore
-      service.FAQ_EMBEDDINGS = [[0.5, 0.8, 0.3]];
       // @ts-ignore
       const res = await service.findRelevantFaq('eligibility');
       expect(res).not.toBeNull();
@@ -456,22 +493,27 @@ describe('Coverage Filler Tests', () => {
       // @ts-ignore
       service.apiKey = 'test-key';
       
-      // Mock client.post to return [1,0,0] for the first call (query)
-      // and [0,1,0] for all subsequent calls (corpus)
+      // Mock client.post: query returns [1,0,0], all corpus calls return [0,1,0] (orthogonal => cosine 0.0)
+      let callIndex = 0;
       // @ts-ignore
-      vi.spyOn(service.client, 'post')
-        .mockResolvedValueOnce({
-          ok: true,
-          data: { predictions: [{ embeddings: { values: [1.0, 0.0, 0.0] } }] },
-        } as any)
-        .mockResolvedValue({
+      vi.spyOn(service.client, 'post').mockImplementation(() => {
+        callIndex++;
+        if (callIndex === 1) {
+          // Query embedding
+          return Promise.resolve({
+            ok: true,
+            data: { predictions: [{ embeddings: { values: [1.0, 0.0, 0.0] } }] },
+          });
+        }
+        // All corpus embeddings => orthogonal to query
+        return Promise.resolve({
           ok: true,
           data: { predictions: [{ embeddings: { values: [0.0, 1.0, 0.0] } }] },
-        } as any);
+        });
+      });
 
       const res = await service.findRelevantFaq('completely irrelevant query xyz');
-      // Cosine similarity will be 0.0, so it hits bestScore < 0.5 and falls back to keyword match.
-      // Keyword match returns null for this query.
+      // Cosine similarity will be 0.0, falls back to keyword match which is null.
       expect(res).toBeNull();
     });
   });
@@ -490,32 +532,38 @@ describe('Coverage Filler Tests', () => {
       vi.unstubAllEnvs();
     });
 
-    it('callGeminiApi returns "Service unavailable" for failed tool call (line 364)', async () => {
+    it('callGeminiApi returns null for failed tool call (line 364)', async () => {
       const service = new ElectionCoachService();
       // @ts-ignore
       service.apiKey = 'test-key';
+
+      // First Gemini response: returns a tool call
       // @ts-ignore
-      vi.spyOn(service as any, 'processToolCall').mockReturnValue({
-        toolName: 'find_polling_booth',
-        args: {},
-        result: null,
-        status: 'error',
-      });
-      // @ts-ignore
-      vi.spyOn(service.client, 'post').mockResolvedValue({
-        ok: true,
-        data: {
-          candidates: [{
-            content: {
-              parts: [{ functionCall: { name: 'find_polling_booth', args: {} } }],
-              role: 'model',
-            },
-          }],
-        },
-      });
+      vi.spyOn(service.client, 'post')
+        .mockResolvedValueOnce({
+          ok: true,
+          error: null,
+          status: 200,
+          data: {
+            candidates: [{
+              content: {
+                parts: [{ functionCall: { name: 'find_polling_booth', args: {} } }],
+                role: 'model',
+              },
+            }],
+          },
+        })
+        // Follow-up response after tool result: returns empty candidates
+        .mockResolvedValueOnce({
+          ok: false,
+          error: 'Follow-up failed',
+          status: 500,
+          data: null,
+        });
+
       // @ts-ignore
       const result = await service.callGeminiApi('find booth');
-      expect(result).toContain('Service unavailable');
+      expect(result).toBeNull();
     });
 
     it('callGeminiApi returns null when responseText is empty (line 369)', async () => {

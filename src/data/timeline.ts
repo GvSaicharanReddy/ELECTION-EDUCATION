@@ -182,12 +182,17 @@ export const UPCOMING_ELECTION_EVENTS: readonly TimelineEvent[] = [
   },
 ] as const;
 
+/** Memoized combined timeline result. */
+let _cachedTimeline: readonly TimelineEvent[] | null = null;
+
 /**
  * Get all timeline events sorted by priority.
  *
  * @returns Combined and priority-sorted array of all timeline events.
  */
 export function getAllTimelineEvents(): readonly TimelineEvent[] {
+  if (_cachedTimeline) return _cachedTimeline;
+
   const priorityOrder: Record<TimelinePriority, number> = {
     [TimelinePriority.CRITICAL]: 0,
     [TimelinePriority.HIGH]: 1,
@@ -195,9 +200,10 @@ export function getAllTimelineEvents(): readonly TimelineEvent[] {
     [TimelinePriority.LOW]: 3,
   };
 
-  return [...ELECTION_PROCESS_MILESTONES, ...UPCOMING_ELECTION_EVENTS].sort(
+  _cachedTimeline = [...ELECTION_PROCESS_MILESTONES, ...UPCOMING_ELECTION_EVENTS].sort(
     (a, b) => priorityOrder[a.priority] - priorityOrder[b.priority],
   );
+  return _cachedTimeline;
 }
 
 /**

@@ -178,10 +178,8 @@ export class ElectionAnalyticsService {
     const sanitised = sanitizeFull(query, ANALYTICS_INPUT_MAX_LENGTH);
 
     try {
-      const [intent, nlResult] = await Promise.all([
-        Promise.resolve(this.classifyIntent(sanitised)),
-        this.analyseWithNaturalLanguage(sanitised),
-      ]);
+      const intent = this.classifyIntent(sanitised);
+      const nlResult = await this.analyseWithNaturalLanguage(sanitised);
 
       const event: AnalyticsEvent = {
         sessionId: this.sessionId,

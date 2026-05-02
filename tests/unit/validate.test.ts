@@ -117,6 +117,17 @@ describe('validateVoterAge', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors[0]).toContain('whole number');
   });
+
+  it('accepts boundary age 150', () => {
+    const result = validateVoterAge(150);
+    expect(result.isValid).toBe(true);
+  });
+
+  it('rejects age 151 (exceeds upper boundary)', () => {
+    const result = validateVoterAge(151);
+    expect(result.isValid).toBe(false);
+    expect(result.errors[0]).toContain('between 0 and 150');
+  });
 });
 
 describe('validatePinCode', () => {

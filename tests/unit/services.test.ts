@@ -98,6 +98,14 @@ describe('ElectionCoachService', () => {
     coach.clearHistory();
     expect(coach.getHistory()).toHaveLength(0);
   });
+
+  it('getHistory returns a copy, not a live reference', async () => {
+    await coach.chat('Test question');
+    const history1 = coach.getHistory();
+    const history2 = coach.getHistory();
+    expect(history1).toEqual(history2);
+    expect(history1).not.toBe(history2);
+  });
 });
 
 describe('ELECTION_TOOLS', () => {

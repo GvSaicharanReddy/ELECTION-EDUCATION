@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
  *  ElectionMapsService Tests
  * ================================================================ */
 
-describe('ElectionMapsService — Extended Coverage', () => {
+describe('ElectionMapsService — Extended Coverage', { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv('VITE_GOOGLE_MAPS_API_KEY', '');

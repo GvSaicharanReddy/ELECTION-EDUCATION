@@ -135,6 +135,19 @@ describe('Google Maps — Location Flow', () => {
     expect(result.data).toBeDefined();
     expect(result.data!.length).toBeGreaterThan(0);
   });
+
+  it('fallback locations have valid structure', async () => {
+    const result = await maps.searchPollingLocations('Test Location');
+    expect(result.ok).toBe(true);
+    result.data!.forEach((loc) => {
+      expect(loc).toHaveProperty('name');
+      expect(loc).toHaveProperty('address');
+      expect(loc).toHaveProperty('latitude');
+      expect(loc).toHaveProperty('longitude');
+      expect(typeof loc.name).toBe('string');
+      expect(typeof loc.latitude).toBe('number');
+    });
+  });
 });
 
 describe('FAQ Search — Election Queries', () => {

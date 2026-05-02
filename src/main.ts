@@ -54,7 +54,7 @@ let scene: ElectionScene | null = null;
  *
  * @throws {Error} If the `#app` root element is missing from the DOM.
  */
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
   const appContainer = document.getElementById('app');
   if (!appContainer) {
     throw new Error('Bootstrap: #app root element not found in DOM.');
@@ -62,7 +62,7 @@ function bootstrap(): void {
 
   initAccessibleFallback();
   init3DScene(appContainer);
-  initWidgets();
+  await initWidgets();
   initCloudServices();
   initListeners();
 }
@@ -90,7 +90,7 @@ function init3DScene(appContainer: HTMLElement): void {
   if (shouldEnable3D) {
     try {
       scene = new ElectionScene(appContainer);
-      appContainer.style.display = 'block';
+      appContainer.classList.toggle('webgl-active', true);
       store.setState({ is3DEnabled: true });
     } catch (err) {
       logger.warn(LOG_CTX, '3D scene failed to initialise', err);
@@ -99,17 +99,22 @@ function init3DScene(appContainer: HTMLElement): void {
     }
   } else {
     store.setState({ is3DEnabled: false });
-    appContainer.style.display = 'none';
+    appContainer.classList.toggle('webgl-active', false);
     appContainer.setAttribute('aria-hidden', 'true');
   }
 }
 
 /**
+ * Interface for UI widgets that initialise themselves on construction.
+ */
+interface InitialisableWidget {}
+
+/**
  * Initialize all standard UI widgets.
  * Each widget is initialised independently so a single failure cannot cascade.
  */
-function initWidgets(): void {
-  const widgets: Array<{ name: string; constructor: new () => unknown }> = [
+async function initWidgets(): Promise<void> {
+  const widgets: Array<{ name: string; constructor: new () => InitialisableWidget }> = [
     { name: 'CoachPanel', constructor: ElectionCoachPanel },
     { name: 'TranslationWidget', constructor: TranslationWidget },
     { name: 'MapsWidget', constructor: MapsWidget },

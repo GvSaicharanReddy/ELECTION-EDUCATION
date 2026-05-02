@@ -31,7 +31,8 @@ export const ELECTION_TOOLS: readonly GeminiToolDeclaration[] = [
         },
         targetLang: {
           type: 'string',
-          description: 'The ISO code for the target language, e.g. hi, te, ta',
+          description: 'ISO 639-1 code for the target Indian language',
+          enum: ['hi','te','ta','kn','bn','mr','gu','ml','pa','or','as'],
         },
       },
       required: ['text', 'targetLang'],
@@ -240,6 +241,9 @@ const COACH_CACHE_TTL_MS = 600000;
 /** Maximum cache entries for coach responses. */
 const COACH_MAX_CACHE_ENTRIES = 50;
 
+/** Maximum number of conversation history turns to keep. */
+const MAX_HISTORY_TURNS = 20;
+
 /** Maximum characters to use for cache key derivation. */
 const CACHE_KEY_SLICE_LENGTH = 100;
 
@@ -321,6 +325,12 @@ export class ElectionCoachService {
       return this.createMessage('assistant', cached);
     }
 
+    // Trim conversation history to prevent unbounded growth
+    if (this.conversationHistory.length > MAX_HISTORY_TURNS * 2) {
+      this.conversationHistory =
+        this.conversationHistory.slice(-MAX_HISTORY_TURNS * 2);
+    }
+
     // Record user message
     this.conversationHistory.push(this.createMessage('user', sanitised));
 
@@ -358,7 +368,62 @@ export class ElectionCoachService {
       return null;
     }
 
-    return this.processGeminiResponse(response.data.candidates[0].content.parts);
+    const parts = response.data.candidates[0].content.parts;
+    const toolParts = parts.filter(
+      (p): p is GeminiPart & { functionCall: { name: string; args: Record<string, unknown> } } =>
+        !!p.functionCall,
+    );
+
+    // If Gemini returned tool calls, execute them and send results back
+    if (toolParts.length > 0) {
+      const toolResults = toolParts.map((p) => this.processToolCall(p.functionCall));
+      const functionResponseParts = toolResults.map((r) => ({
+        functionResponse: {
+          name: r.toolName,
+          response: { result: r.status === 'success' ? String(r.result) : 'Service unavailable' },
+        },
+      }));
+
+      // Build follow-up request with function role turn
+      const followUpBody = {
+        systemInstruction: { parts: [{ text: ELECTION_COACH_SYSTEM_PROMPT }] },
+        contents: [
+          ...this.conversationHistory
+            .filter((m) => m.role !== 'system')
+            .map((m) => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }],
+            })),
+          { role: 'user', parts: [{ text: query }] },
+          { role: 'model', parts },
+          { role: 'function', parts: functionResponseParts },
+        ],
+        tools: [
+          {
+            functionDeclarations: ELECTION_TOOLS.map((tool) => ({
+              name: tool.name,
+              description: tool.description,
+              parameters: tool.parameters,
+            })),
+          },
+        ],
+        generationConfig: GEMINI_GENERATION_CONFIG,
+      };
+
+      const followUp = await this.client.post<GeminiApiResponse>(endpoint, followUpBody);
+      if (followUp.ok && followUp.data?.candidates?.[0]) {
+        const followUpText = followUp.data.candidates[0].content.parts
+          .filter((p): p is GeminiPart & { text: string } => !!p.text)
+          .map((p) => p.text)
+          .join('\n');
+        return followUpText || null;
+      }
+
+      // Follow-up failed — cannot produce a meaningful response
+      return null;
+    }
+
+    return this.processGeminiResponse(parts);
   }
 
   /**
@@ -369,11 +434,15 @@ export class ElectionCoachService {
    */
   private buildGeminiRequest(query: string): object {
     return {
+      systemInstruction: { parts: [{ text: ELECTION_COACH_SYSTEM_PROMPT }] },
       contents: [
-        {
-          role: 'user',
-          parts: [{ text: `${ELECTION_COACH_SYSTEM_PROMPT}\n\nUser question: ${query}` }],
-        },
+        ...this.conversationHistory
+          .filter((m) => m.role !== 'system')
+          .map((m) => ({
+            role: m.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: m.content }],
+          })),
+        { role: 'user', parts: [{ text: query }] },
       ],
       tools: [
         {

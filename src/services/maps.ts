@@ -105,6 +105,13 @@ export class ElectionMapsService {
         return;
       }
 
+      const existing = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+      if (existing) {
+        this.isLoaded = true;
+        resolve(true);
+        return;
+      }
+
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${this.apiKey}&libraries=places,marker&v=weekly`;
       script.async = true;
@@ -137,15 +144,19 @@ export class ElectionMapsService {
       return false;
     }
 
-    this.mapInstance = new google.maps.Map(container, {
-      center: centre || INDIA_CENTRE,
-      zoom: zoom || DEFAULT_ZOOM,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-    });
+    try {
+      this.mapInstance = new google.maps.Map(container, {
+        center: centre || INDIA_CENTRE,
+        zoom: zoom || DEFAULT_ZOOM,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: true,
+      });
 
-    return true;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /**

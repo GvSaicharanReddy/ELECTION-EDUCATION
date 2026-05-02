@@ -245,7 +245,6 @@ export class MapsWidget {
           style="border: 0; border-radius: var(--radius-md);"
           allowfullscreen
           loading="lazy"
-          sandbox="allow-scripts allow-same-origin allow-popups"
           referrerpolicy="no-referrer-when-downgrade"
           title="Google Maps showing polling locations near ${escapeHtml(query)}"
         ></iframe>

@@ -165,14 +165,22 @@ export function generateA11yId(prefix: string): string {
  *
  * @param navLinkId - The currently active nav link ID.
  */
-export function setActiveNavSection(navLinkId: string): void {
+export function setActiveNavSection(sectionId: string): void {
+  const sectionToNavId: Record<string, string> = {
+    'election-journey': 'nav-journey',
+    'election-types': 'nav-types',
+    'timeline': 'nav-timeline',
+    'election-coach': 'nav-coach',
+    'faq': 'nav-faq',
+  };
+  const targetLinkId = sectionToNavId[sectionId] ?? sectionId;
   const navLinks = document.querySelectorAll<HTMLElement>('.nav-link');
-  navLinks.forEach((link) => {
-    if (link.id === navLinkId) {
-      link.classList.add('active');
+  navLinks.forEach(link => {
+    const isActive = link.id === targetLinkId;
+    link.classList.toggle('active', isActive);
+    if (isActive) {
       link.setAttribute('aria-current', 'page');
     } else {
-      link.classList.remove('active');
       link.removeAttribute('aria-current');
     }
   });

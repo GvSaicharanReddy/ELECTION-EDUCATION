@@ -93,7 +93,10 @@ export class AccessibleFallback {
       return;
     }
 
-    // Tab buttons
+    // Create initial panel FIRST so aria-controls references are valid
+    this.updateStagePanel(JourneyStageId.ELIGIBILITY);
+
+    // Tab buttons with roving tabindex (only first tab focusable via Tab key)
     panelsContainer.innerHTML = ELECTION_STAGES.map(
       (stage, i) => `
       <button
@@ -101,6 +104,7 @@ export class AccessibleFallback {
         id="tab-${stage.id}"
         aria-selected="${i === 0 ? 'true' : 'false'}"
         aria-controls="panel-${stage.id}"
+        tabindex="${i === 0 ? '0' : '-1'}"
         class="btn ${i === 0 ? 'btn-primary' : 'btn-secondary'}"
         data-stage-id="${stage.id}"
       >
@@ -110,8 +114,8 @@ export class AccessibleFallback {
     `,
     ).join('');
 
-    // Initial panel
-    this.updateStagePanel(JourneyStageId.ELIGIBILITY);
+    // Keyboard navigation for visible tabs
+    this.setupVisibleTabKeyboard(panelsContainer);
 
     // Click handlers
     panelsContainer.addEventListener('click', (e) => {
@@ -190,7 +194,44 @@ export class AccessibleFallback {
     tabs.forEach((tab) => {
       const isActive = tab.getAttribute('data-stage-id') === stageId;
       tab.setAttribute('aria-selected', String(isActive));
+      tab.setAttribute('tabindex', isActive ? '0' : '-1');
       tab.className = isActive ? 'btn btn-primary' : 'btn btn-secondary';
+    });
+  }
+
+  /**
+   * Set up keyboard navigation for the visible journey stage tabs.
+   * Arrow keys move focus between tabs; Enter/Space activates.
+   */
+  private setupVisibleTabKeyboard(container: HTMLElement): void {
+    container.addEventListener('keydown', (event) => {
+      const target = event.target as HTMLElement;
+      if (target.getAttribute('role') !== 'tab') return;
+
+      const tabs = Array.from(container.querySelectorAll<HTMLElement>('[role="tab"]'));
+      const currentIndex = tabs.indexOf(target);
+      let nextIndex = -1;
+
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        nextIndex = (currentIndex + 1) % tabs.length;
+      } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+        nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+      } else if (event.key === 'Home') {
+        nextIndex = 0;
+      } else if (event.key === 'End') {
+        nextIndex = tabs.length - 1;
+      }
+
+      if (nextIndex !== -1 && nextIndex !== currentIndex) {
+        event.preventDefault();
+        tabs[nextIndex].focus();
+        const stageId = tabs[nextIndex].getAttribute('data-stage-id') as JourneyStageId;
+        if (stageId) store.goToStage(stageId);
+      } else if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        const stageId = target.getAttribute('data-stage-id') as JourneyStageId;
+        if (stageId) store.goToStage(stageId);
+      }
     });
   }
 

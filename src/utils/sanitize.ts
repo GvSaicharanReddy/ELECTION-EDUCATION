@@ -16,10 +16,11 @@ const HTML_ESCAPE_MAP: Readonly<Record<string, string>> = {
   "'": '&#x27;',
   '/': '&#x2F;',
   '`': '&#96;',
+  '=': '&#x3D;',
 };
 
 /** Pattern matching all HTML-sensitive characters. */
-const HTML_ESCAPE_REGEX = /[&<>"'/`]/g;
+const HTML_ESCAPE_REGEX = /[&<>"'/`=]/g;
 
 /** Default maximum character limit for user input truncation. */
 const DEFAULT_MAX_LENGTH = 2000;
@@ -85,7 +86,7 @@ export function sanitizeUrl(url: string): string {
   }
   const trimmed = url.trim();
   
-  if (/^[/#.]/.test(trimmed)) {
+  if (/^[.#]/.test(trimmed) || (trimmed.startsWith('/') && !trimmed.startsWith('//'))) {
     return trimmed;
   }
 

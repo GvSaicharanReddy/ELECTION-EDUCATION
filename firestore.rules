@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Analytics logs — write-only from client, read-only for admins
+    match /analytics/{docId} {
+      allow read: if false;
+      allow create: if request.resource.data.keys().hasAll(['query', 'intent', 'timestamp'])
+                    && request.resource.data.query is string
+                    && request.resource.data.query.size() <= 2000;
+      allow update, delete: if false;
+    }
+
+    // Feedback submissions — write-only
+    match /feedback/{docId} {
+      allow read: if false;
+      allow create: if request.resource.data.keys().hasAll(['message', 'timestamp'])
+                    && request.resource.data.message is string
+                    && request.resource.data.message.size() <= 5000;
+      allow update, delete: if false;
+    }
+
+    // Default deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

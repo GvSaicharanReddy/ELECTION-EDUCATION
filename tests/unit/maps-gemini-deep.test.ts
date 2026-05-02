@@ -148,31 +148,45 @@ describe('ElectionCoachService — Deep Coverage', () => {
 
   it('callGeminiApi handles tool calls', async () => {
     const service = new ElectionCoachService();
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({
-        candidates: [
-          {
+
+    // First call: Gemini returns a tool call
+    // Second call (follow-up with tool result): Gemini returns final text
+    let callCount = 0;
+    globalThis.fetch = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({
+            candidates: [{
+              content: {
+                parts: [
+                  { text: 'I am checking that for you.' },
+                  { functionCall: { name: 'find_polling_location', args: { query: 'Mumbai' } } },
+                ],
+                role: 'model',
+              },
+            }],
+          }),
+        });
+      }
+      // Follow-up response after tool result
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({
+          candidates: [{
             content: {
-              parts: [
-                { text: 'I am checking that for you.' },
-                {
-                  functionCall: {
-                    name: 'find_polling_location',
-                    args: { query: 'Mumbai' }
-                  }
-                }
-              ],
-              role: 'model'
-            }
-          }
-        ]
-      })
+              parts: [{ text: 'Your nearest polling booth in Mumbai is at XYZ.' }],
+              role: 'model',
+            },
+          }],
+        }),
+      });
     });
 
     const response = await service.chat('Where to vote in Mumbai?');
-    expect(response.content).toContain('I am checking that for you.');
-    expect(response.content).toContain('[find_polling_location]');
+    expect(response.content).toContain('Mumbai');
   });
 });

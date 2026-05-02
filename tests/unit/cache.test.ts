@@ -89,6 +89,17 @@ describe('ElectionCache', () => {
     expect(cache.get('fresh')).toBe('v3');
     vi.useRealTimers();
   });
+
+  it('updates value when setting an existing key', () => {
+    cache.set('upd', 'original');
+    cache.set('upd', 'updated');
+    expect(cache.get('upd')).toBe('updated');
+    expect(cache.size).toBe(1);
+  });
+
+  it('returns false when deleting a non-existent key', () => {
+    expect(cache.delete('ghost')).toBe(false);
+  });
 });
 
 describe('makeCacheKey', () => {

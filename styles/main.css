@@ -247,7 +247,7 @@ body {
   background: transparent;
 }
 
-.nav-link[aria-current='true'] {
+.nav-link[aria-current='page'] {
   border-top: 2px solid var(--saffron);
   border-bottom: 2px solid var(--saffron);
 }
@@ -282,6 +282,10 @@ main {
 /* WebGL canvas container - Hide visually but keep if needed, though we should likely turn it off for a true government portal */
 .webgl-container {
   display: none; /* Hide 3D by default in government style */
+}
+
+.webgl-container.webgl-active {
+  display: block;
 }
 
 /* Content sections */

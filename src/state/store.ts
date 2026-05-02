@@ -52,7 +52,10 @@ export class ElectionStore {
    * @returns Frozen copy of the current state.
    */
   getState(): Readonly<AppState> {
-    return { ...this.state };
+    return Object.freeze({
+      ...this.state,
+      coachMessages: [...this.state.coachMessages],
+    });
   }
 
   /**

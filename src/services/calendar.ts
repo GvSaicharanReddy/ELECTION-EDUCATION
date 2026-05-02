@@ -109,7 +109,7 @@ export class ElectionCalendarService {
       text: safeTitle,
       dates: `${startFormatted}/${endFormatted}`,
       details: safeDesc,
-      sprop: 'website:https://eci.gov.in',
+      src: 'election-saathi-india',
     });
 
     return `https://calendar.google.com/calendar/render?${params.toString()}`;

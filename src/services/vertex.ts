@@ -52,7 +52,10 @@ interface VertexConfig {
 
 /** Vertex AI text-embedding model for election FAQ matching. */
 const VERTEX_CONFIG: VertexConfig = {
-  projectId: 'election-saathi-india',
+  projectId: String(
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_CLOUD_PROJECT) ||
+      'election-saathi-india',
+  ),
   location: 'us-central1',
   model: 'text-embedding-004',
 };
@@ -115,6 +118,14 @@ const KEYWORD_FALLBACK_SCORE = 0.6;
 /** Maximum length for text input to Vertex AI. */
 const VERTEX_INPUT_MAX_LENGTH = 500;
 
+/** Cached corpus embeddings — computed once per session. */
+let _corpusEmbeddingsCache: (number[] | null)[] | null = null;
+
+/** @internal Reset corpus cache — exposed for testing only. */
+export function _resetCorpusCache(): void {
+  _corpusEmbeddingsCache = null;
+}
+
 /* ---- Service ---- */
 
 /**
@@ -171,7 +182,7 @@ export class ElectionVertexService {
     try {
       const [queryEmbedding, corpusEmbeddings] = await Promise.all([
         this.embedText(sanitised),
-        Promise.all(ELECTION_FAQ_CORPUS.map((faq) => this.embedText(faq.question))),
+        this.getCorpusEmbeddings(),
       ]);
 
       if (!queryEmbedding) {
@@ -228,6 +239,21 @@ export class ElectionVertexService {
     }
 
     return null;
+  }
+
+  /**
+   * Get or compute corpus embeddings with session-level caching.
+   *
+   * @returns Array of embedding vectors for each FAQ entry.
+   */
+  private async getCorpusEmbeddings(): Promise<(number[] | null)[]> {
+    if (_corpusEmbeddingsCache) {
+      return _corpusEmbeddingsCache;
+    }
+    _corpusEmbeddingsCache = await Promise.all(
+      ELECTION_FAQ_CORPUS.map((faq) => this.embedText(faq.question)),
+    );
+    return _corpusEmbeddingsCache;
   }
 
   /**

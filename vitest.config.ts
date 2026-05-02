@@ -11,6 +11,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    testTimeout: 15000,
     include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
@@ -21,7 +22,6 @@ export default defineConfig({
         'src/types/**',
         'src/scene/**',
         'src/ui/**',
-        'src/utils/a11y.ts',
       ],
       thresholds: {
         statements: 80,

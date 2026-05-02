@@ -61,6 +61,9 @@ export class ElectionCache<T = unknown> {
       return undefined;
     }
 
+    this.store.delete(key);
+    this.store.set(key, entry);
+
     return entry.value;
   }
 

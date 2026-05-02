@@ -56,8 +56,15 @@ const POINT_LIGHT_DIST = 20;
 /** Point light Y position. */
 const POINT_LIGHT_Y = 5;
 
+/** Math midpoint for random spread. */
+const MIDPOINT = 0.5;
+
+/** Number of sine-wave cycles along the stage path. */
+const SINE_CYCLE_COUNT = 2;
 /** Node radius for dodecahedron. */
 const NODE_RADIUS = 0.5;
+/** Curve centre for S-curve X parameter. */
+const CURVE_CENTRE = 0.5;
 /** Dodecahedron detail level. */
 const NODE_DETAIL = 0;
 /** Node emissive intensity (default). */
@@ -141,6 +148,8 @@ const INACTIVE_GLOW_OPACITY = 0.08;
 
 /** Camera lerp factor (smoothness). */
 const CAMERA_LERP = 0.03;
+/** Squared distance threshold below which camera is considered converged. */
+const CAMERA_CONVERGE_THRESHOLD_SQ = 0.0001;
 /** Time-to-seconds divisor. */
 const TIME_DIVISOR = 0.001;
 /** Node Y-rotation speed. */
@@ -153,6 +162,8 @@ const ROTATION_SPEED_X = 0.2;
 const ROTATION_AMP_X = 0.1;
 /** Particle drift rotation speed. */
 const PARTICLE_DRIFT_SPEED = 0.02;
+/** Sentinel value indicating the animation loop has been disposed. */
+const DISPOSED_SENTINEL = -1;
 
 /** Stage node colours matching the Indian palette. */
 const STAGE_COLOURS: Record<JourneyStageId, number> = {
@@ -193,6 +204,7 @@ export class ElectionScene {
   private animationId: number;
   private targetCameraPos: THREE.Vector3;
   private readonly cleanupFns: Array<() => void>;
+  private readonly textures: THREE.CanvasTexture[] = [];
 
   /**
    * Create and mount the Election Scene into the given container.
@@ -203,7 +215,7 @@ export class ElectionScene {
   constructor(container: HTMLElement) {
     this.isReducedMotion = prefersReducedMotion();
     this.stageNodes = [];
-    this.animationId = 0;
+    this.animationId = DISPOSED_SENTINEL;
     this.cleanupFns = [];
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
@@ -249,6 +261,7 @@ export class ElectionScene {
     this.cleanupFns.push(unsubscribe);
 
     // Start render loop
+    this.animationId = 0;
     this.animate();
   }
 
@@ -282,8 +295,8 @@ export class ElectionScene {
     ELECTION_STAGES.forEach((stage, index) => {
       // Position nodes in a gentle S-curve
       const t = index / (ELECTION_STAGES.length - 1);
-      const x = (t - NODE_RADIUS) * CURVE_SPREAD_X;
-      const y = Math.sin(t * Math.PI * MAX_PIXEL_RATIO) * CURVE_AMP_Y;
+      const x = (t - CURVE_CENTRE) * CURVE_SPREAD_X;
+      const y = Math.sin(t * Math.PI * SINE_CYCLE_COUNT) * CURVE_AMP_Y;
       const z = Math.cos(t * Math.PI) * CURVE_DEPTH_Z;
       const position = new THREE.Vector3(x, y, z);
 
@@ -355,6 +368,7 @@ export class ElectionScene {
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.needsUpdate = true;
+    this.textures.push(texture);
 
     const material = new THREE.SpriteMaterial({
       map: texture,
@@ -395,9 +409,10 @@ export class ElectionScene {
     const positions = new Float32Array(PARTICLE_COUNT * VERTEX_STRIDE);
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-      positions[i * VERTEX_STRIDE] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_X;
-      positions[i * VERTEX_STRIDE + 1] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Y;
-      positions[i * VERTEX_STRIDE + Z_COMPONENT_OFFSET] = (Math.random() - NODE_RADIUS) * PARTICLE_SPREAD_Z;
+      positions[i * VERTEX_STRIDE] = (Math.random() - MIDPOINT) * PARTICLE_SPREAD_X;
+      positions[i * VERTEX_STRIDE + 1] = (Math.random() - MIDPOINT) * PARTICLE_SPREAD_Y;
+      positions[i * VERTEX_STRIDE + Z_COMPONENT_OFFSET] =
+        (Math.random() - MIDPOINT) * PARTICLE_SPREAD_Z;
     }
 
     const geometry = new THREE.BufferGeometry();
@@ -450,11 +465,16 @@ export class ElectionScene {
    * Main animation loop.
    */
   private animate(): void {
+    if (this.animationId === DISPOSED_SENTINEL) return;
     this.animationId = requestAnimationFrame(() => this.animate());
 
     // Smooth camera interpolation
     this.camera.position.lerp(this.targetCameraPos, CAMERA_LERP);
-    this.camera.lookAt(0, 0, 0);
+
+    // Only recalculate lookAt when camera is still moving
+    if (this.camera.position.distanceToSquared(this.targetCameraPos) > CAMERA_CONVERGE_THRESHOLD_SQ) {
+      this.camera.lookAt(0, 0, 0);
+    }
 
     if (!this.isReducedMotion) {
       // Gentle rotation of stage nodes
@@ -508,9 +528,13 @@ export class ElectionScene {
    * Clean up the scene and release resources.
    */
   dispose(): void {
-    cancelAnimationFrame(this.animationId);
+    const id = this.animationId;
+    this.animationId = DISPOSED_SENTINEL;
+    cancelAnimationFrame(id);
     this.cleanupFns.forEach((fn) => fn());
     this.cleanupFns.length = 0;
+    this.textures.forEach((t) => t.dispose());
+    this.textures.length = 0;
     this.renderer.dispose();
     this.scene.clear();
   }
