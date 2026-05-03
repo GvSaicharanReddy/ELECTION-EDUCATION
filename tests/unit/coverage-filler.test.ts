@@ -697,7 +697,7 @@ describe('Coverage Filler Tests', () => {
     it('calls callback when reduced motion change fires', () => {
       const callback = vi.fn();
       let changeHandler: any;
-      const addListener = vi.fn((event, handler) => {
+      const addListener = vi.fn((_event, handler) => {
         changeHandler = handler;
       });
       globalThis.window.matchMedia = vi.fn().mockReturnValue({
@@ -839,9 +839,9 @@ describe('Coverage Filler Tests', () => {
       // @ts-ignore
       globalThis.google = {
         maps: {
-          Map: vi.fn(() => { throw new Error('Map constructor failed'); }),
-        },
-      };
+          Map: vi.fn(() => { throw new Error('Map constructor failed'); }) as any,
+        } as any,
+      } as any;
       const result = service.initMap('map-error');
       expect(result).toBe(false);
       // @ts-ignore
@@ -892,9 +892,9 @@ describe('Coverage Filler Tests', () => {
       // Populate some history
       // @ts-ignore
       service.conversationHistory = [
-        { role: 'system', content: 'system' },
-        { role: 'assistant', content: 'assistant' },
-        { role: 'user', content: 'user' },
+        { id: '1', timestamp: 1, role: 'system', content: 'system' },
+        { id: '2', timestamp: 2, role: 'assistant', content: 'assistant' },
+        { id: '3', timestamp: 3, role: 'user', content: 'user' },
       ];
       // @ts-ignore
       const req = service.buildFollowUpRequest('query', [], []);
@@ -956,47 +956,36 @@ describe('Coverage Filler Tests', () => {
 
   describe('Module-level env branches (logger 34, vertex 57)', () => {
     it('logger.ts resolveLevel with valid env', async () => {
-      const origEnv = import.meta.env.VITE_LOG_LEVEL;
-      import.meta.env.VITE_LOG_LEVEL = 'warn';
+      vi.stubEnv('VITE_LOG_LEVEL', 'warn');
       vi.resetModules();
       const { logger } = await import('../../src/utils/logger');
       expect(logger).toBeDefined();
-      import.meta.env.VITE_LOG_LEVEL = origEnv;
+      vi.unstubAllEnvs();
     });
 
     it('logger.ts resolveLevel in PROD mode', async () => {
-      const origProd = import.meta.env.PROD;
-      const origEnv = import.meta.env.VITE_LOG_LEVEL;
-      // Force it to use the default fallback in PROD
-      delete import.meta.env.VITE_LOG_LEVEL;
-      // @ts-ignore
-      import.meta.env.PROD = true;
+      vi.stubEnv('VITE_LOG_LEVEL', '');
+      vi.stubEnv('PROD', true as any);
       vi.resetModules();
       const { logger } = await import('../../src/utils/logger');
       expect(logger).toBeDefined();
-      
-      // Restore
-      import.meta.env.VITE_LOG_LEVEL = origEnv;
-      // @ts-ignore
-      import.meta.env.PROD = origProd;
+      vi.unstubAllEnvs();
     });
 
     it('vertex.ts fallback config with VITE_GOOGLE_CLOUD_PROJECT', async () => {
-      const origEnv = import.meta.env.VITE_GOOGLE_CLOUD_PROJECT;
-      import.meta.env.VITE_GOOGLE_CLOUD_PROJECT = 'custom-project';
+      vi.stubEnv('VITE_GOOGLE_CLOUD_PROJECT', 'custom-project');
       vi.resetModules();
       let { ElectionVertexService } = await import('../../src/services/vertex');
       let service = new ElectionVertexService();
       expect(service).toBeDefined();
 
       // Test fallback when env is missing
-      delete import.meta.env.VITE_GOOGLE_CLOUD_PROJECT;
+      vi.stubEnv('VITE_GOOGLE_CLOUD_PROJECT', '');
       vi.resetModules();
       ({ ElectionVertexService } = await import('../../src/services/vertex'));
       service = new ElectionVertexService();
       expect(service).toBeDefined();
-
-      import.meta.env.VITE_GOOGLE_CLOUD_PROJECT = origEnv;
+      vi.unstubAllEnvs();
     });
   });
 
