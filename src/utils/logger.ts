@@ -26,7 +26,7 @@ const LEVEL_WEIGHT: Readonly<Record<LogLevel, number>> = {
 
 /** Resolve the minimum log level from the build-time env variable. */
 function resolveLevel(): LogLevel {
-  const env = import.meta.env['VITE_LOG_LEVEL'] as string | undefined;
+  const env = import.meta.env['VITE_LOG_LEVEL'];
   if (env && env in LEVEL_WEIGHT) {
     return env as LogLevel;
   }

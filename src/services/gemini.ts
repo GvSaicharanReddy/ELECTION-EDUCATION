@@ -508,20 +508,15 @@ export class ElectionCoachService {
   }
 
   private async dispatchTool(name: string, args: Record<string, unknown>): Promise<string> {
-    switch (name) {
-      case 'lookup_election_faq':
-        return this.dispatchLookupFaq(args);
-      case 'check_voter_eligibility':
-        return this.dispatchCheckEligibility(args);
-      case 'get_election_timeline':
-        return this.dispatchGetTimeline();
-      case 'translate_text':
-        return await this.dispatchTranslateText(args);
-      case 'find_polling_location':
-        return await this.dispatchFindPollingLocation(args);
-      default:
-        return `Tool "${name}" is not yet connected to a live service.`;
-    }
+    const handlers: Record<string, () => string | Promise<string>> = {
+      lookup_election_faq: () => this.dispatchLookupFaq(args),
+      check_voter_eligibility: () => this.dispatchCheckEligibility(args),
+      get_election_timeline: () => this.dispatchGetTimeline(),
+      translate_text: () => this.dispatchTranslateText(args),
+      find_polling_location: () => this.dispatchFindPollingLocation(args),
+    };
+    
+    return handlers[name] ? await handlers[name]() : `Tool "${name}" is not yet connected to a live service.`;
   }
 
   private dispatchLookupFaq(args: Record<string, unknown>): string {
@@ -545,14 +540,14 @@ export class ElectionCoachService {
   }
 
   private async dispatchFindPollingLocation(args: Record<string, unknown>): Promise<string> {
-    const query = String(args['query'] ?? '');
-    const pinCode = String(args['pin_code'] ?? '');
-    const fullQuery = pinCode ? `${query} ${pinCode}` : query;
-    const res = await this.mapsService.searchPollingLocations(fullQuery);
-    if (res.ok && res.data && res.data.length > 0) {
+    const queryTokens = [args['query'], args['pin_code']].filter(Boolean);
+    const res = await this.mapsService.searchPollingLocations(queryTokens.join(' '));
+    
+    if (res.data?.length) {
       return res.data.map((loc) => `${loc.name}: ${loc.address}`).join('\n');
     }
-    return res.error ?? 'No polling locations found.';
+    
+    return String(res.error || 'No polling locations found.');
   }
 
   /**

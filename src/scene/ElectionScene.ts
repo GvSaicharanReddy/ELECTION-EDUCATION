@@ -600,17 +600,15 @@ export class ElectionScene {
   }
 
   private disposeObject(object: THREE.Object3D): void {
-    if (
-      object instanceof THREE.Mesh ||
-      object instanceof THREE.Points ||
-      object instanceof THREE.Sprite
-    ) {
-      if (object.geometry) {
-        object.geometry.dispose();
-      }
-      if (object.material) {
-        this.disposeMaterial(object.material);
-      }
+    const obj = object as unknown as {
+      geometry?: { dispose?: () => void };
+      material?: THREE.Material | THREE.Material[];
+    };
+    
+    obj.geometry?.dispose?.();
+    
+    if (obj.material) {
+      this.disposeMaterial(obj.material);
     }
   }
 }
