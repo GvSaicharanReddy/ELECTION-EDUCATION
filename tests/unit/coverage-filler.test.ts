@@ -954,7 +954,7 @@ describe('Coverage Filler Tests', () => {
     });
   });
 
-  describe('Module-level env branches (logger 31-32, vertex 57)', () => {
+  describe('Module-level env branches (logger 34, vertex 57)', () => {
     it('logger.ts resolveLevel with valid env', async () => {
       const origEnv = import.meta.env.VITE_LOG_LEVEL;
       import.meta.env.VITE_LOG_LEVEL = 'warn';
@@ -964,14 +964,98 @@ describe('Coverage Filler Tests', () => {
       import.meta.env.VITE_LOG_LEVEL = origEnv;
     });
 
+    it('logger.ts resolveLevel in PROD mode', async () => {
+      const origProd = import.meta.env.PROD;
+      const origEnv = import.meta.env.VITE_LOG_LEVEL;
+      // Force it to use the default fallback in PROD
+      delete import.meta.env.VITE_LOG_LEVEL;
+      // @ts-ignore
+      import.meta.env.PROD = true;
+      vi.resetModules();
+      const { logger } = await import('../../src/utils/logger');
+      expect(logger).toBeDefined();
+      
+      // Restore
+      import.meta.env.VITE_LOG_LEVEL = origEnv;
+      // @ts-ignore
+      import.meta.env.PROD = origProd;
+    });
+
     it('vertex.ts fallback config with VITE_GOOGLE_CLOUD_PROJECT', async () => {
       const origEnv = import.meta.env.VITE_GOOGLE_CLOUD_PROJECT;
       import.meta.env.VITE_GOOGLE_CLOUD_PROJECT = 'custom-project';
       vi.resetModules();
-      const { ElectionVertexService } = await import('../../src/services/vertex');
-      const service = new ElectionVertexService();
+      let { ElectionVertexService } = await import('../../src/services/vertex');
+      let service = new ElectionVertexService();
       expect(service).toBeDefined();
+
+      // Test fallback when env is missing
+      delete import.meta.env.VITE_GOOGLE_CLOUD_PROJECT;
+      vi.resetModules();
+      ({ ElectionVertexService } = await import('../../src/services/vertex'));
+      service = new ElectionVertexService();
+      expect(service).toBeDefined();
+
       import.meta.env.VITE_GOOGLE_CLOUD_PROJECT = origEnv;
+    });
+  });
+
+  describe('gemini.ts dispatch tool branches (lines 542-555)', () => {
+    it('dispatchTranslateText handles missing text and targetLang (lines 542-543)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service.translationService, 'translateText').mockResolvedValue('ok');
+      // @ts-ignore
+      const res = await service.dispatchTranslateText({});
+      expect(res).toBe('ok');
+    });
+
+    it('dispatchFindPollingLocation handles missing pin_code and missing error (lines 548, 555)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service.mapsService, 'searchPollingLocations').mockResolvedValue({ ok: false, error: null });
+      // @ts-ignore
+      const res = await service.dispatchFindPollingLocation({});
+      expect(res).toBe('No polling locations found.');
+    });
+
+    it('handleToolCalls maps error status to Service unavailable (line 408)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service, 'processToolCall').mockResolvedValue({ toolName: 'test', status: 'error', result: 'res' });
+      // @ts-ignore
+      vi.spyOn(service, 'buildFollowUpRequest').mockReturnValue({});
+      // @ts-ignore
+      vi.spyOn(service.client, 'post').mockResolvedValue({ ok: false });
+      // @ts-ignore
+      await service.handleToolCalls('query', [], [{ functionCall: { name: 'test', args: {} } }], 'endpoint');
+      // @ts-ignore
+      expect(service.buildFollowUpRequest).toHaveBeenCalledWith(
+        'query', [], 
+        expect.arrayContaining([expect.objectContaining({ functionResponse: { name: 'test', response: { result: 'Service unavailable' } } })])
+      );
+    });
+
+    it('dispatchLookupFaq handles missing arg and no match (lines 528-529)', () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      const res = service.dispatchLookupFaq({});
+      expect(res).toBe('No FAQ match found.');
+    });
+
+    it('dispatchLookupFaq returns answer on match (line 529)', () => {
+      const service = new ElectionCoachService();
+      // 'NOTA' is in the FAQ
+      // @ts-ignore
+      const res = service.dispatchLookupFaq({ search_query: 'NOTA' });
+      expect(res).toContain('As per the current rules');
+    });
+
+    it('dispatchCheckEligibility handles invalid age resulting in errors (line 534)', () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      const res = service.dispatchCheckEligibility({ age: 'xyz' });
+      expect(res).toContain('Age must be a valid number.');
     });
   });
 });
