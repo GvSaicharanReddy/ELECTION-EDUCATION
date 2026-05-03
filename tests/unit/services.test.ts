@@ -108,12 +108,19 @@ describe('ElectionCoachService', () => {
   });
 
   it('trims conversation history when it exceeds MAX_HISTORY_TURNS * 2', async () => {
-    // Send 22 messages to exceed the 40-message threshold (20 turns × 2)
-    for (let i = 0; i < 21; i++) {
-      await coach.chat(`Question number ${i}`);
+    // Directly populate history to bypass slow async operations
+    for (let i = 0; i < 45; i++) {
+      // @ts-ignore
+      coach.conversationHistory.push({ role: i % 2 === 0 ? 'user' : 'assistant', content: `msg ${i}` });
     }
+    
+    // Trigger one chat to invoke the trimming logic
+    // @ts-ignore
+    vi.spyOn(coach, 'getStaticResponse').mockReturnValue('mock response');
+    await coach.chat('Trigger trim');
+    
     const history = coach.getHistory();
-    // History should be trimmed — never unbounded
+    // History should be trimmed — MAX_HISTORY_TURNS is 20 (40 messages max)
     expect(history.length).toBeLessThanOrEqual(42);
   });
 });

@@ -10,7 +10,7 @@
 /// <reference types="@types/google.maps" />
 
 import { PollingLocation, ApiResponse } from '../types/index';
-import { sanitizeFull } from '../utils/sanitize';
+import { sanitizeForApi } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
 import { logger } from '../utils/logger';
 
@@ -178,7 +178,7 @@ export class ElectionMapsService {
    * @returns Array of matching polling locations.
    */
   async searchPollingLocations(query: string): Promise<ApiResponse<PollingLocation[]>> {
-    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(query, MAPS_INPUT_MAX_LENGTH);
     const cacheKey = makeCacheKey('maps', sanitised.toLowerCase());
 
     // Check cache
@@ -288,7 +288,7 @@ export class ElectionMapsService {
    * @returns Google Maps embed URL.
    */
   generateMapsEmbedUrl(query: string): string {
-    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(query, MAPS_INPUT_MAX_LENGTH);
     const encoded = encodeURIComponent(`${sanitised} election office India`);
 
     if (this.apiKey) {
@@ -306,7 +306,7 @@ export class ElectionMapsService {
    * @returns Google Maps URL that opens in a new tab.
    */
   generateMapsLink(query: string): string {
-    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(query, MAPS_INPUT_MAX_LENGTH);
     return `https://www.google.com/maps/search/${encodeURIComponent(sanitised + ' election office India')}`;
   }
 

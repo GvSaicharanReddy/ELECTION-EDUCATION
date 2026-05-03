@@ -12,7 +12,7 @@
  */
 
 import { SafeApiClient } from './api-client';
-import { sanitizeFull } from '../utils/sanitize';
+import { sanitizeForApi } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
 import type { ApiResponse } from '../types/index';
 
@@ -170,7 +170,7 @@ export class ElectionTranslationService {
       return text;
     }
 
-    const sanitised = sanitizeFull(text, TRANSLATION_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(text, TRANSLATION_INPUT_MAX_LENGTH);
     const cacheKey = makeCacheKey('translate', `${safeTarget}:${sanitised.slice(0, TRANSLATION_CACHE_KEY_LENGTH)}`);
 
     const cached = this.cache.get(cacheKey);
@@ -212,7 +212,7 @@ export class ElectionTranslationService {
       return [...texts];
     }
 
-    const sanitised = texts.map((t) => sanitizeFull(t, TRANSLATION_INPUT_MAX_LENGTH));
+    const sanitised = texts.map((t) => sanitizeForApi(t, TRANSLATION_INPUT_MAX_LENGTH));
     return await this.fetchBatchTranslation(sanitised, safeTarget as string, [...texts]);
   }
 

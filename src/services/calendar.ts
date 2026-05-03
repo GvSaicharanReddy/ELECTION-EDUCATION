@@ -9,7 +9,7 @@
  * @module services/calendar
  */
 
-import { sanitizeFull } from '../utils/sanitize';
+import { sanitizeForApi } from '../utils/sanitize';
 
 /* ---- Types ---- */
 
@@ -23,16 +23,45 @@ export interface ElectionReminder {
   readonly category: 'registration' | 'polling' | 'counting' | 'deadline' | 'general';
 }
 
+/* ---- Date Helpers ---- */
+
+/** Length of the ISO 8601 date portion (YYYY-MM-DD = 10 chars). */
+const ISO_DATE_LENGTH = 10;
+
+/** Number of days ahead for the registration deadline reminder. */
+const REGISTRATION_OFFSET_DAYS = 30;
+
+/** Number of days ahead for polling day reminder. */
+const POLLING_OFFSET_DAYS = 45;
+
+/** Number of days ahead for counting day reminder (polling + 4). */
+const COUNTING_OFFSET_DAYS = 49;
+
+/** Number of days ahead for model code of conduct enforcement reminder. */
+const MCC_OFFSET_DAYS = 30;
+
+/**
+ * Compute a future ISO date string relative to today.
+ *
+ * @param offsetDays - Number of days from today.
+ * @returns ISO 8601 date string (YYYY-MM-DD).
+ */
+function getRelativeDate(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, ISO_DATE_LENGTH);
+}
+
 /* ---- Constants ---- */
 
-/** Pre-defined civic election reminders for Indian election seasons. */
+/** Pre-defined civic election reminders with dynamically computed dates. */
 export const ELECTION_REMINDERS: readonly ElectionReminder[] = [
   {
     title: '📝 Voter Registration Deadline — Check Eligibility',
     description:
       'Last date to register as a new voter or update your voter details using Form 6 at nvsp.in. ' +
       'Check your status: https://electoralsearch.eci.gov.in | Helpline: 1950',
-    startDate: '2025-12-31',
+    startDate: getRelativeDate(REGISTRATION_OFFSET_DAYS),
     isDeadline: true,
     category: 'registration',
   },
@@ -42,7 +71,7 @@ export const ELECTION_REMINDERS: readonly ElectionReminder[] = [
       'Election day! Carry your EPIC card or any of the 12 approved photo IDs. ' +
       'Find your booth: https://electoralsearch.eci.gov.in | Helpline: 1950. ' +
       'Remember: voting is your constitutional right under Article 326.',
-    startDate: '2026-02-15',
+    startDate: getRelativeDate(POLLING_OFFSET_DAYS),
     isDeadline: false,
     category: 'polling',
   },
@@ -51,7 +80,7 @@ export const ELECTION_REMINDERS: readonly ElectionReminder[] = [
     description:
       'Official vote counting begins. Follow live results at: https://results.eci.gov.in. ' +
       'Results are final and declared by the Election Commission of India.',
-    startDate: '2026-02-19',
+    startDate: getRelativeDate(COUNTING_OFFSET_DAYS),
     isDeadline: false,
     category: 'counting',
   },
@@ -60,14 +89,12 @@ export const ELECTION_REMINDERS: readonly ElectionReminder[] = [
     description:
       'From this date, the Model Code of Conduct (MCC) is in force. ' +
       'All political parties and candidates must comply with ECI guidelines.',
-    startDate: '2026-01-15',
+    startDate: getRelativeDate(MCC_OFFSET_DAYS),
     isDeadline: true,
     category: 'deadline',
   },
-] as const;
+];
 
-/** Length of the ISO 8601 date portion (YYYY-MM-DD = 10 chars). */
-const ISO_DATE_LENGTH = 10;
 
 /** Maximum length for calendar event titles. */
 const CALENDAR_TITLE_MAX_LENGTH = 200;
@@ -95,8 +122,8 @@ export class ElectionCalendarService {
    * @returns Google Calendar add-event URL string.
    */
   generateCalendarLink(reminder: ElectionReminder): string {
-    const safeTitle = sanitizeFull(reminder.title, CALENDAR_TITLE_MAX_LENGTH);
-    const safeDesc = sanitizeFull(reminder.description, CALENDAR_DESC_MAX_LENGTH);
+    const safeTitle = sanitizeForApi(reminder.title, CALENDAR_TITLE_MAX_LENGTH);
+    const safeDesc = sanitizeForApi(reminder.description, CALENDAR_DESC_MAX_LENGTH);
 
     // Format: YYYYMMDD for all-day events
     const startFormatted = this.formatDateForCalendar(reminder.startDate);

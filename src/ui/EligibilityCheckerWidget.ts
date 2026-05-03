@@ -8,6 +8,7 @@
 
 import { validateVoterAge } from '../utils/validate';
 import { announce } from '../utils/a11y';
+import { setSafeInnerHTML } from '../utils/sanitize';
 
 /** Minimum age required to vote. */
 const VOTING_AGE_THRESHOLD = 18;
@@ -47,7 +48,7 @@ export class EligibilityCheckerWidget {
    * Render the age eligibility form into the container element.
    */
   private render(): void {
-    this.container.innerHTML = `
+    setSafeInnerHTML(this.container, `
       <div class="card" style="margin-bottom: var(--space-6); border-left: 3px solid var(--green-india);">
         <h3 style="color: var(--navy); margin-bottom: var(--space-2);">
           ✓ Quick Check: Are you eligible to vote?
@@ -70,7 +71,7 @@ export class EligibilityCheckerWidget {
         </form>
         <div id="eligibility-result" style="margin-top: var(--space-3); font-weight: 600;" aria-live="polite"></div>
       </div>
-    `;
+    `);
 
     this.setupListeners();
   }

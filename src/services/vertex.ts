@@ -12,7 +12,7 @@
  */
 
 import { SafeApiClient } from './api-client';
-import { sanitizeFull } from '../utils/sanitize';
+import { sanitizeForApi } from '../utils/sanitize';
 
 /* ---- Types ---- */
 
@@ -166,7 +166,7 @@ export class ElectionVertexService {
    * @returns Best matching FAQ entry or null.
    */
   async findRelevantFaq(query: string): Promise<SemanticFaqMatch | null> {
-    const sanitised = sanitizeFull(query, VERTEX_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(query, VERTEX_INPUT_MAX_LENGTH);
 
     if (!this.isConfigured()) {
       return this.keywordFallback(sanitised);

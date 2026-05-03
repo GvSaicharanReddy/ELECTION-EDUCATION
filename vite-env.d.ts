@@ -7,6 +7,10 @@
 interface ImportMetaEnv {
   /** Google Gemini / Vertex AI API key */
   readonly VITE_GEMINI_API_KEY: string;
+  /** Alternate Gemini API key (fallback) */
+  readonly VITE_GEMINI_KEY?: string;
+  /** Google Cloud API key for NL API / Firestore analytics */
+  readonly VITE_GOOGLE_CLOUD_API_KEY?: string;
   /** Google Gemini model identifier (e.g. gemini-1.5-flash) */
   readonly VITE_GEMINI_MODEL: string;
   /** Google Cloud project ID for Vertex AI */
@@ -17,6 +21,8 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_TRANSLATION_API_KEY?: string;
   /** Application environment */
   readonly VITE_APP_ENV: 'development' | 'production' | 'test';
+  /** Logger verbosity level */
+  readonly VITE_LOG_LEVEL?: string;
 }
 
 interface ImportMeta {

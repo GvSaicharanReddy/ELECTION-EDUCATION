@@ -26,6 +26,7 @@ const BATCH_SIZE = 50;
 export class TranslationWidget {
   private readonly service: ElectionTranslationService;
   private currentLang: string = 'en';
+  private cachedNodes: HTMLElement[] | null = null;
 
   /**
    * Initialize the Translation widget and render the language selector.
@@ -158,7 +159,17 @@ export class TranslationWidget {
    * @returns Array of HTMLElements with translatable text.
    */
   private getTranslatableNodes(): HTMLElement[] {
-    return this.collectTranslatableNodes();
+    if (!this.cachedNodes) {
+      this.cachedNodes = this.collectTranslatableNodes();
+    }
+    return this.cachedNodes;
+  }
+
+  /**
+   * Invalidate the node cache when the DOM changes significantly.
+   */
+  invalidateNodeCache(): void {
+    this.cachedNodes = null;
   }
 
   /**

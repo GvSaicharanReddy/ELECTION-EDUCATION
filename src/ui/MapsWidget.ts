@@ -8,7 +8,8 @@
  */
 
 import { ElectionMapsService } from '../services/maps';
-import { escapeHtml, sanitizeFull, sanitizeUrl } from '../utils/sanitize';
+import { escapeHtml, sanitizeForApi, sanitizeUrl, setSafeInnerHTML } from '../utils/sanitize';
+import type { PollingLocation } from '../types/index';
 import { announce } from '../utils/a11y';
 
 /** Maximum input length for map search queries. */
@@ -42,7 +43,7 @@ export class MapsWidget {
       if (container) {
         container.style.display = 'block';
         container.style.height = '400px';
-        container.innerHTML = ''; // clear comment
+        container.textContent = '';
         this.maps.initMap('maps-embed-container');
       }
     }
@@ -64,7 +65,7 @@ export class MapsWidget {
     widget.setAttribute('role', 'region');
     widget.setAttribute('aria-label', 'Find polling locations using Google Maps');
 
-    widget.innerHTML = this.getWidgetTemplate();
+    setSafeInnerHTML(widget, this.getWidgetTemplate());
 
     coach.appendChild(widget);
     this.setupEventListeners(widget);
@@ -147,7 +148,7 @@ export class MapsWidget {
    * @param query - Search query.
    */
   private async handleSearch(query: string): Promise<void> {
-    const sanitised = sanitizeFull(query, MAPS_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(query, MAPS_INPUT_MAX_LENGTH);
     const results = document.getElementById('maps-results');
 
     if (!results) {
@@ -155,8 +156,8 @@ export class MapsWidget {
     }
 
     results.setAttribute('aria-busy', 'true');
-    results.innerHTML =
-      '<p style="text-align: center; color: var(--text-muted); padding: var(--space-4);">🔍 Searching for polling locations...</p>';
+    setSafeInnerHTML(results,
+      '<p style="text-align: center; color: var(--text-muted); padding: var(--space-4);">🔍 Searching for polling locations...</p>');
     announce('Searching for polling locations near ' + sanitised);
 
     const response = await this.maps.searchPollingLocations(sanitised);
@@ -180,17 +181,17 @@ export class MapsWidget {
    */
   private renderSuccessResults(
     container: HTMLElement,
-    locations: import('../types/index').PollingLocation[],
+    locations: PollingLocation[],
     query: string,
   ): void {
     const cards = locations.map((loc) => this.renderLocationCard(loc)).join('');
 
-    container.innerHTML = `
+    setSafeInnerHTML(container, `
       <p style="font-size: var(--text-sm); color: var(--text-muted); margin-bottom: var(--space-3);">
         Found ${locations.length} result(s) for "${escapeHtml(query)}"
       </p>
       ${cards}
-    `;
+    `);
   }
 
   /**
@@ -199,7 +200,7 @@ export class MapsWidget {
    * @param loc - Polling location data.
    * @returns HTML string for the location card.
    */
-  private renderLocationCard(loc: import('../types/index').PollingLocation): string {
+  private renderLocationCard(loc: PollingLocation): string {
     const constituencyHtml = loc.constituency
       ? `<p style="font-size: var(--text-xs); color: var(--text-muted);">Constituency: ${escapeHtml(loc.constituency)}</p>`
       : '';
@@ -210,7 +211,7 @@ export class MapsWidget {
         <p style="font-size: var(--text-sm); color: var(--text-secondary);">${escapeHtml(loc.address)}</p>
         ${constituencyHtml}
         <a
-          href="${this.maps.generateMapsLink(loc.name + ' ' + loc.address)}"
+          href="${sanitizeUrl(this.maps.generateMapsLink(loc.name + ' ' + loc.address))}"
           target="_blank"
           rel="noopener noreferrer"
           class="btn btn-secondary"
@@ -239,7 +240,7 @@ export class MapsWidget {
 
     if (!isNativeMap) {
       const embedUrl = this.maps.generateMapsEmbedUrl(query);
-      embedContainer.innerHTML = `
+      setSafeInnerHTML(embedContainer, `
         <iframe
           src="${sanitizeUrl(embedUrl)}"
           width="100%"
@@ -250,7 +251,7 @@ export class MapsWidget {
           referrerpolicy="no-referrer-when-downgrade"
           title="Google Maps showing polling locations near ${escapeHtml(query)}"
         ></iframe>
-      `;
+      `);
     }
 
     embedContainer.style.display = 'block';
@@ -263,7 +264,7 @@ export class MapsWidget {
    * @param errorMsg - Error message to display (will be escaped).
    */
   private renderErrorState(container: HTMLElement, errorMsg: string | null): void {
-    container.innerHTML = `
+    setSafeInnerHTML(container, `
       <div style="text-align: center; padding: var(--space-4); color: var(--text-muted);">
         <p style="color: #ef4444; margin-bottom: var(--space-2); font-weight: 500;">
           ⚠️ ${escapeHtml(errorMsg || 'Failed to find polling locations.')}
@@ -272,6 +273,6 @@ export class MapsWidget {
           You can also try the official <a href="https://electoralsearch.eci.gov.in/" target="_blank" rel="noopener noreferrer" style="color: var(--navy); font-weight: 600; text-decoration: underline;">ECI Electoral Search</a>.
         </p>
       </div>
-    `;
+    `);
   }
 }

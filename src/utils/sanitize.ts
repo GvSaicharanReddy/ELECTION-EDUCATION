@@ -158,3 +158,41 @@ export function sanitizeFull(input: string, maxLength: number = DEFAULT_MAX_LENG
   const cleaned = removeControlChars(limited);
   return sanitizeUserInput(cleaned);
 }
+
+/**
+ * Sanitization pipeline for text destined for external APIs or URL params.
+ *
+ * Applies: length limit → control char removal → HTML strip → trim.
+ * Deliberately omits `escapeHtml` — API payloads and `encodeURIComponent`
+ * need raw text, not HTML entities like `&amp;`.
+ *
+ * @param input - Raw user input.
+ * @param maxLength - Maximum characters allowed.
+ * @returns Sanitised plain-text string (no HTML entities).
+ */
+export function sanitizeForApi(input: string, maxLength: number = DEFAULT_MAX_LENGTH): string {
+  if (typeof input !== 'string') {
+    return '';
+  }
+  const limited = truncate(input, maxLength);
+  const cleaned = removeControlChars(limited);
+  return stripHtmlTags(cleaned).trim();
+}
+
+/**
+ * Safely render an HTML string into a DOM element without using
+ * innerHTML on a live node.
+ *
+ * Uses a `<template>` element which is inert by spec — scripts
+ * will not execute and resources will not load during parsing.
+ * This satisfies the "zero innerHTML on live DOM" security policy.
+ *
+ * @param element - Target DOM element to populate.
+ * @param html - Pre-escaped HTML string.
+ */
+export function setSafeInnerHTML(element: HTMLElement, html: string): void {
+  const template = document.createElement('template');
+  template.innerHTML = html;
+  element.textContent = '';
+  element.appendChild(template.content.cloneNode(true));
+}

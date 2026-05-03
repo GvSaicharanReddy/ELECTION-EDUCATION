@@ -41,6 +41,9 @@ const LOG_CTX = 'Bootstrap';
 /** Track initialised scene for cleanup on reduced-motion toggle. */
 let scene: ElectionScene | null = null;
 
+/** Flag to prevent double-initialization. */
+let isBootstrapped = false;
+
 // ─── Bootstrap ────────────────────────────────────────────────────────────────
 
 /**
@@ -56,6 +59,12 @@ let scene: ElectionScene | null = null;
  * @throws {Error} If the `#app` root element is missing from the DOM.
  */
 function bootstrap(): void {
+  if (isBootstrapped) {
+    logger.warn(LOG_CTX, 'Bootstrap called but already initialized.');
+    return;
+  }
+  isBootstrapped = true;
+
   const appContainer = document.getElementById('app');
   if (!appContainer) {
     throw new Error('Bootstrap: #app root element not found in DOM.');

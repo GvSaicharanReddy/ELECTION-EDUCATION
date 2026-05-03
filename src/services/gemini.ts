@@ -14,6 +14,11 @@ import { CoachMessage, GeminiToolDeclaration, ToolCallResult } from '../types/in
 import { sanitizeFull } from '../utils/sanitize';
 import { ElectionCache, makeCacheKey } from '../utils/cache';
 import { ElectionAnalyticsService } from './analytics';
+import { searchFaq } from '../data/faq';
+import { validateVoterAge } from '../utils/validate';
+import { ELECTION_REMINDERS } from './calendar';
+import { ElectionTranslationService } from './translation';
+import { ElectionMapsService } from './maps';
 
 /* ---- Tool Declarations for Gemini Function Calling ---- */
 
@@ -281,6 +286,8 @@ export class ElectionCoachService {
   private readonly model: string;
   private readonly cache: ElectionCache<string>;
   private readonly analytics: ElectionAnalyticsService;
+  private readonly translationService: ElectionTranslationService;
+  private readonly mapsService: ElectionMapsService;
   private conversationHistory: CoachMessage[];
 
   /**
@@ -298,6 +305,8 @@ export class ElectionCoachService {
     });
     this.cache = new ElectionCache<string>({ defaultTtlMs: COACH_CACHE_TTL_MS, maxEntries: COACH_MAX_CACHE_ENTRIES });
     this.analytics = new ElectionAnalyticsService();
+    this.translationService = new ElectionTranslationService();
+    this.mapsService = new ElectionMapsService();
     this.conversationHistory = [];
   }
 
@@ -338,26 +347,27 @@ export class ElectionCoachService {
         this.conversationHistory.slice(-MAX_HISTORY_TURNS * 2);
     }
 
-    // Record user message
-    this.conversationHistory.push(this.createMessage('user', sanitised));
-
     // Try Gemini API
     if (this.isConfigured()) {
       const response = await this.callGeminiApi(sanitised);
       if (response) {
         this.cache.set(cacheKey, response);
-        const message = this.createMessage('assistant', response);
-        this.conversationHistory.push(message);
-        return message;
+        const userMsg = this.createMessage('user', sanitised);
+        const assistantMsg = this.createMessage('assistant', response);
+        this.conversationHistory.push(userMsg);
+        this.conversationHistory.push(assistantMsg);
+        return assistantMsg;
       }
     }
 
     // Fallback: static response
+    const userMsg = this.createMessage('user', sanitised);
+    this.conversationHistory.push(userMsg);
     const fallback = this.getStaticResponse(sanitised);
     this.cache.set(cacheKey, fallback);
-    const message = this.createMessage('assistant', fallback);
-    this.conversationHistory.push(message);
-    return message;
+    const assistantMsg = this.createMessage('assistant', fallback);
+    this.conversationHistory.push(assistantMsg);
+    return assistantMsg;
   }
 
   /**
@@ -389,8 +399,10 @@ export class ElectionCoachService {
   }
 
   private async handleToolCalls(query: string, parts: GeminiPart[], toolParts: (GeminiPart & { functionCall: { name: string; args: Record<string, unknown> } })[], endpoint: string): Promise<string | null> {
-    const toolResults = toolParts.map((p) => this.processToolCall(p.functionCall));
-    const functionResponseParts = toolResults.map((r) => ({
+    const toolResults = await Promise.all(
+      toolParts.map((p) => this.processToolCall(p.functionCall)),
+    );
+    const functionResponseParts: FunctionResponsePart[] = toolResults.map((r) => ({
       functionResponse: {
         name: r.toolName,
         response: { result: r.status === 'success' ? String(r.result) : 'Service unavailable' },
@@ -423,7 +435,7 @@ export class ElectionCoachService {
           })),
         { role: 'user', parts: [{ text: query }] },
         { role: 'model', parts },
-        { role: 'function', parts: functionResponseParts },
+        { role: 'user', parts: functionResponseParts },
       ],
       tools: this.getToolDeclarations(),
       generationConfig: GEMINI_GENERATION_CONFIG,
@@ -478,23 +490,69 @@ export class ElectionCoachService {
   }
 
   /**
-   * Process a Gemini tool call and return the result.
+   * Process a Gemini tool call by dispatching to the appropriate service.
    *
    * @param functionCall - The tool call from Gemini.
-   * @returns Tool call result.
+   * @returns Tool call result with live data.
    */
-  private processToolCall(functionCall: {
+  private async processToolCall(functionCall: {
     name: string;
     args: Record<string, unknown>;
-  }): ToolCallResult {
-    // Tool calls are dispatched to the appropriate service
-    // Actual implementation connects to Translation, Maps, and FAQ modules
-    return {
-      toolName: functionCall.name,
-      args: functionCall.args,
-      result: `Tool "${functionCall.name}" invoked with args: ${JSON.stringify(functionCall.args)}. Connect the corresponding service for live results.`,
-      status: 'success',
-    };
+  }): Promise<ToolCallResult> {
+    try {
+      const result = await this.dispatchTool(functionCall.name, functionCall.args);
+      return { toolName: functionCall.name, args: functionCall.args, result, status: 'success' };
+    } catch {
+      return { toolName: functionCall.name, args: functionCall.args, result: 'Service unavailable', status: 'error' };
+    }
+  }
+
+  private async dispatchTool(name: string, args: Record<string, unknown>): Promise<string> {
+    switch (name) {
+      case 'lookup_election_faq':
+        return this.dispatchLookupFaq(args);
+      case 'check_voter_eligibility':
+        return this.dispatchCheckEligibility(args);
+      case 'get_election_timeline':
+        return this.dispatchGetTimeline();
+      case 'translate_text':
+        return await this.dispatchTranslateText(args);
+      case 'find_polling_location':
+        return await this.dispatchFindPollingLocation(args);
+      default:
+        return `Tool "${name}" is not yet connected to a live service.`;
+    }
+  }
+
+  private dispatchLookupFaq(args: Record<string, unknown>): string {
+    const results = searchFaq(String(args['search_query'] ?? ''));
+    return results[0]?.answer ?? 'No FAQ match found.';
+  }
+
+  private dispatchCheckEligibility(args: Record<string, unknown>): string {
+    const result = validateVoterAge(args['age']);
+    return result.sanitizedValue ?? result.errors.join(' ');
+  }
+
+  private dispatchGetTimeline(): string {
+    return ELECTION_REMINDERS.map((r) => `${r.title}: ${r.startDate}`).join('\n');
+  }
+
+  private async dispatchTranslateText(args: Record<string, unknown>): Promise<string> {
+    const text = String(args['text'] ?? '');
+    const targetLang = String(args['targetLang'] ?? '');
+    return await this.translationService.translateText(text, targetLang);
+  }
+
+  private async dispatchFindPollingLocation(args: Record<string, unknown>): Promise<string> {
+    const query = String(args['query'] ?? '');
+    const pinCode = String(args['pin_code'] ?? '');
+    const fullQuery = pinCode ? `${query} ${pinCode}` : query;
+    const res = await this.mapsService.searchPollingLocations(fullQuery);
+    if (res.ok && res.data && res.data.length > 0) {
+      return res.data.map((loc) => `${loc.name}: ${loc.address}`).join('\n');
+    }
+    return res.error ?? 'No polling locations found.';
   }
 
   /**

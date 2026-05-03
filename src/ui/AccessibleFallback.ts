@@ -14,7 +14,7 @@ import { ELECTION_FAQ } from '../data/faq';
 import { getAllTimelineEvents } from '../data/timeline';
 import { store } from '../state/store';
 import { announce, setActiveNavSection } from '../utils/a11y';
-import { escapeHtml, sanitizeUrl } from '../utils/sanitize';
+import { escapeHtml, sanitizeUrl, setSafeInnerHTML } from '../utils/sanitize';
 import { JourneyStageId, TimelineEvent } from '../types/index';
 
 /**
@@ -50,7 +50,7 @@ export class AccessibleFallback {
    * Render the core structure of the fallback layer.
    */
   private render(): void {
-    this.container.innerHTML = `
+    setSafeInnerHTML(this.container, `
       <h2 class="sr-only">Election Journey — Accessible Text Interface</h2>
       <p class="sr-only">
         This is the full text alternative to the 3D visual experience.
@@ -77,7 +77,7 @@ export class AccessibleFallback {
           ).join('')}
         </ul>
       </nav>
-    `;
+    `);
 
     // Attach keyboard navigation for tab list
     this.setupKeyboardNav();
@@ -97,7 +97,7 @@ export class AccessibleFallback {
     this.updateStagePanel(JourneyStageId.ELIGIBILITY);
 
     // Tab buttons with roving tabindex (only first tab focusable via Tab key)
-    panelsContainer.innerHTML = ELECTION_STAGES.map(
+    setSafeInnerHTML(panelsContainer, ELECTION_STAGES.map(
       (stage, i) => `
       <button
         role="tab"
@@ -112,7 +112,7 @@ export class AccessibleFallback {
         ${escapeHtml(stage.title)}
       </button>
     `,
-    ).join('');
+    ).join(''));
 
     // Keyboard navigation for visible tabs
     this.setupVisibleTabKeyboard(panelsContainer);
@@ -144,7 +144,8 @@ export class AccessibleFallback {
     }
 
     const pos = getStagePosition(stageId);
-    content.innerHTML = this.buildStagePanelHtml(stage, pos);
+    content.textContent = '';
+    setSafeInnerHTML(content, this.buildStagePanelHtml(stage, pos));
 
     this.updateTabSelection(stageId);
   }
@@ -223,7 +224,7 @@ export class AccessibleFallback {
       return;
     }
 
-    grid.innerHTML = ELECTION_TYPES.map(
+    setSafeInnerHTML(grid, ELECTION_TYPES.map(
       (type) => `
       <div class="card" role="listitem" style="margin-bottom: var(--space-4);">
         <h3 style="color: var(--navy);">${escapeHtml(type.name)}</h3>
@@ -249,7 +250,7 @@ export class AccessibleFallback {
         </details>
       </div>
     `,
-    ).join('');
+    ).join(''));
   }
 
   /**
@@ -262,7 +263,7 @@ export class AccessibleFallback {
     }
 
     const events = getAllTimelineEvents();
-    timeline.innerHTML = events.map((e) => this.renderTimelineEvent(e)).join('');
+    setSafeInnerHTML(timeline, events.map((e) => this.renderTimelineEvent(e)).join(''));
   }
 
   /**
@@ -310,7 +311,7 @@ export class AccessibleFallback {
       return;
     }
 
-    faqContainer.innerHTML = ELECTION_FAQ.map(
+    setSafeInnerHTML(faqContainer, ELECTION_FAQ.map(
       (faq) => `
       <details class="card" style="margin-bottom: var(--space-3);">
         <summary style="cursor: pointer; font-weight: 600; color: var(--text-primary);">
@@ -324,7 +325,7 @@ export class AccessibleFallback {
         </p>
       </details>
     `,
-    ).join('');
+    ).join(''));
   }
 
   /**

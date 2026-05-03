@@ -592,18 +592,25 @@ export class ElectionScene {
     
     // Explicitly dispose of GPU memory (geometries & materials) to prevent severe SPA leaks
     this.scene.traverse((object: THREE.Object3D) => {
-      if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
-        const mesh = object as THREE.Mesh | THREE.Points;
-        if (mesh.geometry) {
-          mesh.geometry.dispose();
-        }
-        if (mesh.material) {
-          this.disposeMaterial(mesh.material);
-        }
-      }
+      this.disposeObject(object);
     });
     
     this.renderer.dispose();
     this.scene.clear();
+  }
+
+  private disposeObject(object: THREE.Object3D): void {
+    if (
+      object instanceof THREE.Mesh ||
+      object instanceof THREE.Points ||
+      object instanceof THREE.Sprite
+    ) {
+      if (object.geometry) {
+        object.geometry.dispose();
+      }
+      if (object.material) {
+        this.disposeMaterial(object.material);
+      }
+    }
   }
 }

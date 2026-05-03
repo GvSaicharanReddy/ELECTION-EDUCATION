@@ -12,7 +12,7 @@
  */
 
 import { SafeApiClient } from './api-client';
-import { sanitizeFull } from '../utils/sanitize';
+import { sanitizeForApi } from '../utils/sanitize';
 
 /* ---- Types ---- */
 
@@ -175,7 +175,7 @@ export class ElectionAnalyticsService {
       return;
     }
 
-    const sanitised = sanitizeFull(query, ANALYTICS_INPUT_MAX_LENGTH);
+    const sanitised = sanitizeForApi(query, ANALYTICS_INPUT_MAX_LENGTH);
 
     try {
       const intent = this.classifyIntent(sanitised);

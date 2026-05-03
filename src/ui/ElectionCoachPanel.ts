@@ -8,12 +8,15 @@
  */
 
 import { ElectionCoachService } from '../services/gemini';
-import { sanitizeFull, stripHtmlTags } from '../utils/sanitize';
+import { sanitizeForApi, setSafeInnerHTML, stripHtmlTags } from '../utils/sanitize';
 import { validateCoachQuery } from '../utils/validate';
 import { announce } from '../utils/a11y';
 
 /** Maximum characters of coach response to include in screen reader announcement. */
 const ANNOUNCE_MAX_LENGTH = 200;
+
+/** Timeout in milliseconds for coach requests. */
+const COACH_TIMEOUT_MS = 15000;
 
 /**
  * The Election Coach chat panel.
@@ -44,7 +47,7 @@ export class ElectionCoachPanel {
    * Render the coach panel UI.
    */
   private render(): void {
-    this.container.innerHTML = `
+    setSafeInnerHTML(this.container, `
       <div id="coach-chat" class="card" style="max-width: 640px; margin: 0 auto;">
         <div id="coach-messages" role="log" aria-label="Election Coach conversation" aria-live="polite" aria-atomic="false" aria-busy="false" style="max-height: 400px; overflow-y: auto; margin-bottom: var(--space-4);">
           <div class="coach-message coach-assistant" style="padding: var(--space-3); background: var(--bg-elevated); border-radius: var(--radius-md); margin-bottom: var(--space-3);">
@@ -83,7 +86,7 @@ export class ElectionCoachPanel {
           Powered by Google Gemini AI${this.coach.isConfigured() ? '' : ' (offline mode — using built-in knowledge)'}
         </p>
       </div>
-    `;
+    `);
 
     this.setupEventListeners();
   }
@@ -130,7 +133,7 @@ export class ElectionCoachPanel {
     }
 
     const displayText = stripHtmlTags(query).trim();
-    const apiText = validation.sanitizedValue ?? sanitizeFull(query);
+    const apiText = sanitizeForApi(query);
 
     const messages = document.getElementById('coach-messages');
     if (!messages) {
@@ -144,15 +147,29 @@ export class ElectionCoachPanel {
     this.setMessagesBusy(true);
     const loadingId = this.appendMessage('assistant', '🤔 Thinking about your question...');
 
-    // Get response
-    const response = await this.coach.chat(apiText);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), COACH_TIMEOUT_MS);
 
-    // Replace loading with actual response
-    this.replaceMessage(loadingId, response.content);
-    this.setMessagesBusy(false);
+      const responsePromise = this.coach.chat(apiText);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        controller.signal.addEventListener('abort', () => reject(new Error('Timeout')));
+      });
 
-    // Announce response
-    announce(`Election Coach: ${response.content.slice(0, ANNOUNCE_MAX_LENGTH)}`);
+      const response = await Promise.race([responsePromise, timeoutPromise]);
+      clearTimeout(timeoutId);
+
+      // Replace loading with actual response
+      this.replaceMessage(loadingId, response.content);
+      this.setMessagesBusy(false);
+
+      // Announce response
+      announce(`Election Coach: ${response.content.slice(0, ANNOUNCE_MAX_LENGTH)}`);
+    } catch (error) {
+      this.replaceMessage(loadingId, 'I am currently experiencing high traffic or a network error. Please try again or visit eci.gov.in.');
+      this.setMessagesBusy(false);
+      announce('Election Coach: I am currently experiencing high traffic. Please try again.');
+    }
   }
 
   /**
@@ -175,15 +192,17 @@ export class ElectionCoachPanel {
     const isUser = role === 'user';
     div.style.cssText = this.getMessageStyle(isUser);
 
-    const label = isUser ? 'You' : '🏛️ Official Helpdesk';
-    div.innerHTML = `
-      <p style="color: var(--navy); font-weight: 600; margin-bottom: var(--space-1);">${label}</p>
-      <p class="message-content" style="color: var(--text-secondary); white-space: pre-wrap;"></p>
-    `;
-    const p = div.querySelector('.message-content');
-    if (p) {
-      p.textContent = content;
-    }
+    const labelP = document.createElement('p');
+    labelP.style.cssText = 'color: var(--navy); font-weight: 600; margin-bottom: var(--space-1);';
+    labelP.textContent = isUser ? 'You' : '🏛️ Official Helpdesk';
+
+    const contentP = document.createElement('p');
+    contentP.className = 'message-content';
+    contentP.style.cssText = 'color: var(--text-secondary); white-space: pre-wrap;';
+    contentP.textContent = content;
+
+    div.appendChild(labelP);
+    div.appendChild(contentP);
 
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;

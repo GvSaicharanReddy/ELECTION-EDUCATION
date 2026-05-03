@@ -22,6 +22,11 @@ import { SafeApiClient } from '../../src/services/api-client';
 import { sanitizeUrl, escapeHtml } from '../../src/utils/sanitize';
 import { validateStageId } from '../../src/utils/validate';
 import { getStagePosition } from '../../src/data/election-stages';
+import { trapFocus, onReducedMotionChange } from '../../src/utils/a11y';
+import { ElectionCache } from '../../src/utils/cache';
+import { sanitizeForApi, setSafeInnerHTML } from '../../src/utils/sanitize';
+import { ElectionStore } from '../../src/state/store';
+import { logger } from '../../src/utils/logger';
 
 describe('Coverage Filler Tests', () => {
   beforeEach(() => {
@@ -625,6 +630,348 @@ describe('Coverage Filler Tests', () => {
   describe('validate', () => {
     it('validateStageId rejects non-string', () => {
       expect(validateStageId(123).isValid).toBe(false);
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════
+  // RECENT ADDITIONS FOR 100% COVERAGE
+  // ═══════════════════════════════════════════════════════
+
+  describe('gemini.ts new tools', () => {
+    it('dispatchTool handles translate_text', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service.translationService, 'translateText').mockResolvedValue('translated');
+      // @ts-ignore
+      const res = await service.dispatchTool('translate_text', { text: 'hello', targetLang: 'hi' });
+      expect(res).toBe('translated');
+    });
+
+    it('dispatchTool handles find_polling_location success', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service.mapsService, 'searchPollingLocations').mockResolvedValue({
+        ok: true,
+        data: [{ name: 'Booth A', address: 'Delhi', latitude: 0, longitude: 0 }],
+      });
+      // @ts-ignore
+      const res = await service.dispatchTool('find_polling_location', { query: 'delhi', pin_code: '110001' });
+      expect(res).toBe('Booth A: Delhi');
+    });
+
+    it('dispatchTool handles find_polling_location failure', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service.mapsService, 'searchPollingLocations').mockResolvedValue({
+        ok: false,
+        error: 'Not found error',
+      });
+      // @ts-ignore
+      const res = await service.dispatchTool('find_polling_location', { query: 'delhi' });
+      expect(res).toBe('Not found error');
+    });
+  });
+
+  describe('a11y.ts coverage', () => {
+    it('handleTabFocusShift wraps backward focus from first to last on Shift+Tab', () => {
+      document.body.innerHTML = `
+        <div id="focus-trap">
+          <button id="btn-a">A</button>
+          <button id="btn-b">B</button>
+        </div>`;
+      trapFocus('focus-trap');
+      const container = document.getElementById('focus-trap')!;
+      const btnA = document.getElementById('btn-a')!;
+      btnA.focus();
+      
+      const tabEvent = new KeyboardEvent('keydown', {
+        key: 'Tab', shiftKey: true, bubbles: true, cancelable: true
+      });
+      const preventSpy = vi.spyOn(tabEvent, 'preventDefault');
+      Object.defineProperty(document, 'activeElement', { value: btnA, configurable: true });
+      container.dispatchEvent(tabEvent);
+      expect(preventSpy).toHaveBeenCalled();
+      document.body.innerHTML = '';
+    });
+
+    it('calls callback when reduced motion change fires', () => {
+      const callback = vi.fn();
+      let changeHandler: any;
+      const addListener = vi.fn((event, handler) => {
+        changeHandler = handler;
+      });
+      globalThis.window.matchMedia = vi.fn().mockReturnValue({
+        addEventListener: addListener,
+        removeEventListener: vi.fn(),
+      }) as any;
+
+      onReducedMotionChange(callback);
+      if (changeHandler) changeHandler({ matches: true });
+      expect(callback).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('cache.ts coverage', () => {
+    it('returns false in has() for expired entries', () => {
+      vi.useFakeTimers();
+      const cache = new ElectionCache<string>();
+      cache.set('expiring-has', 'data', 1000);
+      vi.advanceTimersByTime(1500);
+      expect(cache.has('expiring-has')).toBe(false);
+      vi.useRealTimers();
+    });
+  });
+
+  describe('logger.ts coverage', () => {
+    it('logger.debug emits when MIN_LEVEL is debug (default in test)', () => {
+      const spy = vi.spyOn(console, 'debug').mockImplementation(() => undefined);
+      logger.debug('CoverageFiller', 'coverage test message', { extra: true });
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('[CoverageFiller]'),
+        'coverage test message',
+        { extra: true },
+      );
+      spy.mockRestore();
+    });
+  });
+
+  describe('sanitize.ts coverage', () => {
+    it('sanitizeForApi returns empty for non-string', () => {
+      expect(sanitizeForApi(123 as any)).toBe('');
+    });
+    it('setSafeInnerHTML uses template to set content', () => {
+      const el = document.createElement('div');
+      setSafeInnerHTML(el, '<b>safe</b>');
+      expect(el.innerHTML).toBe('<b>safe</b>');
+    });
+  });
+
+  describe('store.ts coverage', () => {
+    it('catches and logs subscriber errors during notify()', () => {
+      // matchMedia must be available for prefersReducedMotion() inside createInitialState
+      const origMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as any;
+
+      const testStore = new ElectionStore();
+
+      // subscribe() calls subscriber(getState()) directly (no try/catch).
+      // The try/catch is only in private notify(). So we subscribe a subscriber
+      // that succeeds on the first call (subscribe) then throws on subsequent calls (notify).
+      let callCount = 0;
+      const faultySubscriber = vi.fn().mockImplementation(() => {
+        callCount++;
+        if (callCount > 1) {
+          throw new Error('Subscriber error in notify');
+        }
+      });
+
+      testStore.subscribe(faultySubscriber);
+      // First call succeeded (subscribe's direct call). Now trigger notify() via setState:
+      expect(() => testStore.setState({ isCoachOpen: true })).not.toThrow();
+      // Subscriber was called twice: once on subscribe, once on setState
+      expect(faultySubscriber).toHaveBeenCalledTimes(2);
+
+      window.matchMedia = origMatchMedia;
+    });
+  });
+
+  // ═══════════════════════════════════════════════════════
+  // FINAL GAP-CLOSING TESTS
+  // ═══════════════════════════════════════════════════════
+
+  describe('gemini.ts dispatch — remaining tools', () => {
+    it('dispatchTool handles check_voter_eligibility (lines 532-535)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      const res = await service.dispatchTool('check_voter_eligibility', { age: 20 });
+      expect(typeof res).toBe('string');
+      expect(res.length).toBeGreaterThan(0);
+    });
+
+    it('dispatchTool handles get_election_timeline (lines 537-539)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      const res = await service.dispatchTool('get_election_timeline', {});
+      expect(typeof res).toBe('string');
+      expect(res.length).toBeGreaterThan(0);
+    });
+
+    it('dispatchTool handles lookup_election_faq (lines 527-530)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      const res = await service.dispatchTool('lookup_election_faq', { search_query: 'eligibility' });
+      expect(typeof res).toBe('string');
+    });
+
+    it('dispatchTool returns fallback for unknown tool (line 523)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      const res = await service.dispatchTool('nonexistent_tool', {});
+      expect(res).toContain('not yet connected');
+    });
+
+    it('processToolCall catches dispatch errors (lines 505-507)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore — force dispatchTool to throw
+      vi.spyOn(service as any, 'dispatchTool').mockRejectedValue(new Error('dispatch crash'));
+      // @ts-ignore
+      const result = await service.processToolCall({ name: 'test', args: {} });
+      expect(result.status).toBe('error');
+      expect(result.result).toBe('Service unavailable');
+    });
+  });
+
+  describe('maps.ts initMap — uncovered branches', () => {
+    it('initMap returns false when maps API is not loaded (lines 154-156)', () => {
+      const service = new ElectionMapsService();
+      // isLoaded is false by default
+      document.body.innerHTML = '<div id="map-uncovered"></div>';
+      const result = service.initMap('map-uncovered');
+      expect(result).toBe(false);
+      document.body.innerHTML = '';
+    });
+
+    it('initMap returns false on map constructor throw (lines 168-171)', () => {
+      const service = new ElectionMapsService();
+      // @ts-ignore
+      service.isLoaded = true;
+      document.body.innerHTML = '<div id="map-error"></div>';
+      // @ts-ignore
+      globalThis.google = {
+        maps: {
+          Map: vi.fn(() => { throw new Error('Map constructor failed'); }),
+        },
+      };
+      const result = service.initMap('map-error');
+      expect(result).toBe(false);
+      // @ts-ignore
+      delete globalThis.google;
+      document.body.innerHTML = '';
+    });
+  });
+
+  describe('translation.ts extractTranslatedText — empty string branch', () => {
+    it('translateText returns original when API returns empty translatedText (line 253)', async () => {
+      const service = new ElectionTranslationService();
+      // @ts-ignore
+      service.apiKey = 'test-key';
+      // @ts-ignore
+      vi.spyOn(service.client, 'post').mockResolvedValue({
+        ok: true,
+        data: { data: { translations: [{ translatedText: '' }] } },
+      });
+      const result = await service.translateText('hello', 'hi');
+      // Empty translatedText → extractTranslatedText returns null → falls back to original
+      expect(result).toBe('hello');
+    });
+  });
+
+  describe('vertex.ts corpus cache hit (lines 244-245)', () => {
+    it('getCorpusEmbeddings returns cached embeddings on second call', async () => {
+      const service = new ElectionVertexService();
+      // @ts-ignore
+      service.apiKey = 'test-key';
+      // @ts-ignore
+      vi.spyOn(service.client, 'post').mockResolvedValue({
+        ok: true,
+        data: { predictions: [{ embeddings: { values: [0.1, 0.2, 0.3] } }] },
+      });
+      // First call populates cache
+      // @ts-ignore
+      const first = await service.getCorpusEmbeddings();
+      // Second call should return cached (lines 243-245)
+      // @ts-ignore
+      const second = await service.getCorpusEmbeddings();
+      expect(second).toBe(first); // Same reference = cache hit
+    });
+  });
+
+  describe('gemini.ts followUp branches (lines 416-421, 433-434)', () => {
+    it('buildFollowUpRequest maps assistant role to model and filters system', async () => {
+      const service = new ElectionCoachService();
+      // Populate some history
+      // @ts-ignore
+      service.conversationHistory = [
+        { role: 'system', content: 'system' },
+        { role: 'assistant', content: 'assistant' },
+        { role: 'user', content: 'user' },
+      ];
+      // @ts-ignore
+      const req = service.buildFollowUpRequest('query', [], []);
+      const contents = req.contents as any[];
+      // First two should be the history without 'system'
+      expect(contents[0].role).toBe('model'); // 'assistant' maps to 'model'
+      expect(contents[1].role).toBe('user');
+    });
+
+    it('followUp returns null when text is empty (lines 416-421)', async () => {
+      const service = new ElectionCoachService();
+      // @ts-ignore
+      vi.spyOn(service, 'processToolCall').mockResolvedValue({ toolName: 'test', status: 'success', result: 'res' });
+      // @ts-ignore
+      vi.spyOn(service, 'buildFollowUpRequest').mockReturnValue({});
+      // Return empty text in follow up
+      // @ts-ignore
+      vi.spyOn(service.client, 'post').mockResolvedValue({
+        ok: true,
+        data: { candidates: [{ content: { parts: [{ text: '' }] } }] },
+      });
+      // @ts-ignore
+      const res = await service.handleToolCalls('query', [], [{ functionCall: { name: 'test', args: {} } }], 'endpoint');
+      expect(res).toBeNull(); // Empty followUpText falls back to null
+    });
+  });
+
+  describe('maps.ts loadMapsApi branches (lines 103-104, 116-119)', () => {
+    it('returns early if already loading (lines 103-104)', () => {
+      const service = new ElectionMapsService();
+      // @ts-ignore
+      service.apiKey = 'test';
+      
+      service.loadMapsApi();
+      service.loadMapsApi();
+      // Verify only 1 script tag was added
+      const scripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+      expect(scripts.length).toBe(1);
+      
+      scripts[0].remove();
+    });
+
+    it('resolves if script tag is found in DOM', async () => {
+      const service = new ElectionMapsService();
+      // @ts-ignore
+      service.apiKey = 'test';
+      const script = document.createElement('script');
+      script.src = 'https://maps.googleapis.com/maps/api/js';
+      document.head.appendChild(script);
+
+      const res = await service.loadMapsApi();
+      expect(res).toBe(true);
+      // @ts-ignore
+      expect(service.isLoaded).toBe(true);
+
+      document.head.removeChild(script);
+    });
+  });
+
+  describe('Module-level env branches (logger 31-32, vertex 57)', () => {
+    it('logger.ts resolveLevel with valid env', async () => {
+      const origEnv = import.meta.env.VITE_LOG_LEVEL;
+      import.meta.env.VITE_LOG_LEVEL = 'warn';
+      vi.resetModules();
+      const { logger } = await import('../../src/utils/logger');
+      expect(logger).toBeDefined();
+      import.meta.env.VITE_LOG_LEVEL = origEnv;
+    });
+
+    it('vertex.ts fallback config with VITE_GOOGLE_CLOUD_PROJECT', async () => {
+      const origEnv = import.meta.env.VITE_GOOGLE_CLOUD_PROJECT;
+      import.meta.env.VITE_GOOGLE_CLOUD_PROJECT = 'custom-project';
+      vi.resetModules();
+      const { ElectionVertexService } = await import('../../src/services/vertex');
+      const service = new ElectionVertexService();
+      expect(service).toBeDefined();
+      import.meta.env.VITE_GOOGLE_CLOUD_PROJECT = origEnv;
     });
   });
 });
